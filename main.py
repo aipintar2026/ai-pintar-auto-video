@@ -69,8 +69,57 @@ TOPICS = [
             "Tidak perlu belajar semuanya sekaligus. "
             "Mulailah sedikit demi sedikit. "
             "Ikuti AI Pintar untuk belajar AI dari dasar."
+        )    {
+        "title": "CARA MEMBUAT PROMPT AI YANG BAGUS",
+        "scenes": [
+            ("MULAI DENGAN TUJUAN", "Jelaskan apa yang ingin kamu buat."),
+            ("BERIKAN KONTEKS", "Ceritakan kebutuhanmu secara jelas."),
+            ("TENTUKAN FORMAT", "Minta AI menjawab dalam format tertentu."),
+            ("BERIKAN CONTOH", "Contoh membantu AI memahami keinginanmu."),
+            ("PERIKSA HASIL", "Periksa dan perbaiki jawaban AI.")
+        ],
+        "voice": (
+            "Ingin mendapatkan jawaban AI yang lebih bagus? "
+            "Mulailah dengan menjelaskan tujuanmu. "
+            "Berikan konteks yang jelas dan tentukan format jawaban. "
+            "Jika perlu, berikan contoh. "
+            "Terakhir, periksa kembali hasilnya. "
+            "Ikuti AI Pintar untuk belajar teknologi."
         )
-    }
+    },
+    {
+        "title": "KENALI PENIPUAN DENGAN AI",
+        "scenes": [
+            ("WASPADA PENIPUAN DIGITAL", "Jangan mudah percaya pesan mencurigakan."),
+            ("SUARA BISA DITIRU", "Teknologi AI dapat meniru suara."),
+            ("PERIKSA IDENTITAS", "Hubungi orang tersebut melalui nomor lain."),
+            ("JANGAN KIRIM UANG", "Pastikan kebenaran sebelum bertransaksi."),
+            ("SELALU WASPADA", "Lindungi diri dan keluarga.")
+        ],
+        "voice": (
+            "Tahukah kamu? Teknologi AI bisa digunakan untuk meniru suara. "
+            "Karena itu, jangan langsung percaya jika menerima telepon "
+            "atau pesan yang meminta uang. Periksa identitas melalui "
+            "nomor lain sebelum bertindak. Tetap waspada dan ikuti AI Pintar."
+        )
+    },
+    {
+        "title": "AI BISA MEMBUAT KESALAHAN",
+        "scenes": [
+            ("AI TIDAK SELALU BENAR", "Jawaban AI bisa mengandung kesalahan."),
+            ("PERIKSA INFORMASI", "Jangan langsung percaya semua jawaban."),
+            ("CARI SUMBER", "Bandingkan dengan sumber tepercaya."),
+            ("GUNAKAN AKAL SEHAT", "Nilai informasi sebelum digunakan."),
+            ("PAKAI AI DENGAN BIJAK", "AI membantu, manusia tetap memutuskan.")
+        ],
+        "voice": (
+            "Jangan menganggap semua jawaban AI pasti benar. "
+            "AI bisa memberikan informasi yang keliru. "
+            "Periksa fakta dan bandingkan dengan sumber tepercaya. "
+            "Gunakan penilaianmu sebelum mengambil keputusan. "
+            "Ikuti AI Pintar untuk belajar AI."
+        )
+    }, 
 ]
 
 def font(size, bold=False):
