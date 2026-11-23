@@ -69,7 +69,9 @@ TOPICS = [
             "Tidak perlu belajar semuanya sekaligus. "
             "Mulailah sedikit demi sedikit. "
             "Ikuti AI Pintar untuk belajar AI dari dasar."
-        )    {
+        )
+    }, 
+    { 
         "title": "CARA MEMBUAT PROMPT AI YANG BAGUS",
         "scenes": [
             ("MULAI DENGAN TUJUAN", "Jelaskan apa yang ingin kamu buat."),
