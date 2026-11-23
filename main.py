@@ -143,29 +143,68 @@ def make_overlay(number, heading, subtitle, path):
     im.save(path)
 
 def pixabay_video(api_key, query, destination):
+    """Cari dan unduh satu footage Pixabay; tampilkan detail jika API menolak."""
     params = urllib.parse.urlencode({
-        "key": api_key, "q": query, "per_page": 20,
-        "video_type": "film", "safesearch": "true"
+        "key": api_key,
+        "q": query,
+        "per_page": 20,
+        "video_type": "film",
+        "safesearch": "true"
     })
     url = API_URL + "?" + params
-    req = urllib.request.Request(url, headers={"User-Agent": "AI-PINTAR-Video/1.0"})
-    with urllib.request.urlopen(req, timeout=35) as response:
-        data = json.loads(response.read().decode("utf-8"))
-    hits = data.get("hits", [])
-    if not hits:
-        raise RuntimeError(f"Pixabay tidak menemukan footage untuk: {query}")
-    # Pilih video yang punya format medium/large dan unduh langsung
-    for hit in hits:
-        formats = hit.get("videos", {})
-        chosen = formats.get("medium") or formats.get("large") or formats.get("small")
-        if chosen and chosen.get("url"):
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "AI-PINTAR-Video/1.0"}
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=35) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+        hits = data.get("hits", [])
+        if not hits:
+            raise RuntimeError(
+                f"Pixabay tidak menemukan footage untuk pencarian: {query}"
+            )
+
+        for hit in hits:
+            formats = hit.get("videos", {})
+            chosen = (
+                formats.get("medium")
+                or formats.get("large")
+                or formats.get("small")
+            )
+            if not chosen or not chosen.get("url"):
+                continue
+
             video_url = chosen["url"]
-            request = urllib.request.Request(video_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(request, timeout=90) as response, open(destination, "wb") as out:
-                out.write(response.read())
-            if Path(destination).stat().st_size > 100_000:
+            request = urllib.request.Request(
+                video_url,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            with urllib.request.urlopen(request, timeout=90) as response:
+                content = response.read()
+
+            if len(content) > 100_000:
+                Path(destination).write_bytes(content)
                 return
-    raise RuntimeError(f"Footage Pixabay tidak dapat diunduh untuk: {query}")
+
+        raise RuntimeError(
+            f"Pixabay menemukan hasil, tetapi video tidak dapat diunduh: {query}"
+        )
+
+    except urllib.error.HTTPError as error:
+        # Jangan cetak URL permintaan karena URL itu memuat API key.
+        detail = error.read().decode("utf-8", errors="replace")
+        print(f"PIXABAY HTTP ERROR: {error.code}")
+        print(f"PIXABAY DETAIL: {detail[:2000]}")
+        raise RuntimeError(
+            f"Pixabay menolak permintaan (HTTP {error.code}). "
+            "Periksa detail PIXABAY DETAIL pada log Actions."
+        ) from error
+    except urllib.error.URLError as error:
+        print(f"PIXABAY CONNECTION ERROR: {error.reason}")
+        raise
 
 async def create_voice(text, output_file):
     await edge_tts.Communicate(text=text, voice=VOICE, rate="+0%", volume="+0%").save(str(output_file))
