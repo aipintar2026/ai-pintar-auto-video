@@ -10,7 +10,7 @@ from datetime import date
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
 
-# AI PINTAR — video vertikal dengan footage bergerak dari Pixabay
+# AI PINTAR — edukasi sederhana 30-45 detik dengan footage bergerak dari Pixabay
 W, H, FPS = 1080, 1920, 30
 VOICE = "id-ID-ArdiNeural"
 API_URL = "https://pixabay.com/api/videos/"
@@ -26,7 +26,7 @@ TOPICS = [
             ("PERIKSA PRIVASI", "Setiap layanan AI punya kebijakan data yang berbeda."),
             ("GUNAKAN AI DENGAN AMAN", "Samarkan informasi sensitif sebelum digunakan.")
         ],
-        "voice": "Hati-hati saat menggunakan kecerdasan buatan. Jangan sembarangan memasukkan nomor KTP, PIN, kata sandi, atau data rekening ke chatbot. Setiap layanan AI memiliki kebijakan privasi yang berbeda. Periksa pengaturannya dan samarkan informasi sensitif sebelum digunakan. Gunakan AI dengan cerdas dan tetap jaga privasimu. Ikuti AI PINTAR untuk belajar teknologi.",
+        "voice": "Saat menggunakan chatbot AI, jangan langsung memasukkan semua informasi pribadi. Hindari membagikan nomor KTP, PIN, kata sandi, alamat lengkap, atau data rekening. Informasi seperti ini bisa berisiko jika tersebar atau digunakan dengan cara yang tidak tepat. Sebelum memakai sebuah layanan AI, baca pengaturan dan kebijakan privasinya. Jika perlu menjelaskan masalah, samarkan nama dan data sensitif terlebih dahulu. Ingat, AI boleh membantu pekerjaanmu, tetapi keamanan data tetap tanggung jawab kita. Ikuti AI PINTAR untuk belajar AI dengan aman.",
         "caption": "Jangan sembarangan membagikan data pribadi ke chatbot AI. Lindungi KTP, PIN, kata sandi, dan data rekening. Gunakan AI dengan aman! #AIPINTAR #TipsAI #KeamananDigital"
     },
     {
@@ -39,7 +39,7 @@ TOPICS = [
             ("RINGKAS INFORMASI", "Pahami informasi panjang dengan lebih mudah."),
             ("TETAP PERIKSA HASILNYA", "AI membantu, keputusan tetap di tanganmu.")
         ],
-        "voice": "Tahukah kamu? AI bisa membantu pekerjaan sehari-hari. Kamu bisa menggunakannya untuk mencari ide, menyusun tulisan, membuat draf laporan, dan merangkum informasi. Namun, jangan langsung percaya semua jawabannya. Periksa kembali hasilnya sebelum digunakan. Gunakan teknologi untuk bekerja lebih cerdas. Ikuti AI PINTAR untuk belajar AI dari dasar.",
+        "voice": "AI dapat membantu pekerjaan sehari-hari, bukan hanya untuk menjawab pertanyaan. Kamu bisa memakainya untuk mencari ide, membuat kerangka laporan, menyusun pesan, merangkum bacaan, atau menyiapkan daftar pekerjaan. Agar hasilnya lebih sesuai, jelaskan tujuan, konteks, dan bentuk jawaban yang kamu inginkan. Misalnya, minta AI membuat rangkuman dalam lima poin dengan bahasa sederhana. Setelah itu, baca dan periksa kembali hasilnya. AI adalah alat bantu, bukan pengganti penilaian manusia. Gunakan waktumu lebih efektif bersama AI. Ikuti AI PINTAR untuk belajar dari dasar.",
         "caption": "AI bisa membantu pekerjaan sehari-hari, mulai dari mencari ide hingga merangkum informasi. Tetap periksa hasilnya! #AIPINTAR #BelajarAI #Produktivitas"
     },
     {
@@ -52,7 +52,7 @@ TOPICS = [
             ("PERIKSA JAWABAN", "Cek kembali informasi dari AI."),
             ("BELAJAR SETIAP HARI", "Sedikit demi sedikit menjadi lebih mahir.")
         ],
-        "voice": "Ingin belajar menggunakan kecerdasan buatan? Mulailah dengan pertanyaan sederhana. Jelaskan tujuanmu dan berikan konteks yang cukup agar AI memahami kebutuhanmu. Setelah mendapat jawaban, periksa kembali informasinya. Tidak perlu belajar semuanya sekaligus. Mulailah sedikit demi sedikit. Ikuti AI PINTAR untuk belajar AI dari dasar.",
+        "voice": "Belajar kecerdasan buatan tidak harus dimulai dengan istilah teknis yang sulit. Kamu bisa mulai dari hal sederhana, seperti bertanya cara membuat jadwal, merangkum tulisan, atau mencari ide. Jelaskan tujuanmu dengan kalimat yang jelas, lalu berikan sedikit konteks agar AI memahami kebutuhanmu. Jika jawabannya belum sesuai, tambahkan informasi atau perbaiki pertanyaanmu. Jangan lupa memeriksa fakta, karena AI juga bisa keliru. Cobalah satu fitur baru setiap hari dan pelajari manfaatnya untuk kegiatan sehari-hari. Ikuti AI PINTAR, kita belajar AI sedikit demi sedikit.",
         "caption": "Belajar AI tidak harus rumit. Mulai dari pertanyaan sederhana, berikan konteks, lalu periksa jawabannya. #AIPINTAR #BelajarAI"
     },
     {
@@ -65,7 +65,7 @@ TOPICS = [
             ("BERIKAN CONTOH", "Contoh membantu AI memahami keinginanmu."),
             ("PERIKSA HASIL", "Periksa dan perbaiki jawaban AI.")
         ],
-        "voice": "Ingin mendapatkan jawaban AI yang lebih bagus? Mulailah dengan menjelaskan tujuanmu. Berikan konteks yang jelas dan tentukan format jawaban. Jika perlu, berikan contoh agar AI lebih memahami keinginanmu. Terakhir, periksa kembali hasilnya. Ikuti AI PINTAR untuk belajar teknologi.",
+        "voice": "Ingin mendapatkan jawaban AI yang lebih sesuai? Buat prompt atau instruksi yang jelas. Pertama, jelaskan tujuan yang ingin dicapai. Kedua, berikan konteks, misalnya siapa pembacanya dan untuk kebutuhan apa. Ketiga, tentukan bentuk jawaban, seperti daftar, tabel, atau langkah-langkah. Kamu juga bisa memberi contoh gaya bahasa yang diinginkan. Jika hasil pertama belum tepat, jangan langsung menyerah. Beri koreksi yang spesifik dan minta AI memperbaikinya. Terakhir, periksa kembali informasi penting sebelum digunakan. Semakin jelas instruksimu, semakin mudah AI memahami kebutuhanmu. Ikuti AI PINTAR untuk tips berikutnya.",
         "caption": "Rahasia prompt yang baik: tujuan jelas, konteks cukup, format tepat, dan periksa hasilnya. #AIPINTAR #PromptAI #TipsAI"
     },
     {
@@ -78,7 +78,7 @@ TOPICS = [
             ("JANGAN KIRIM UANG", "Pastikan kebenaran sebelum bertransaksi."),
             ("SELALU WASPADA", "Lindungi diri dan keluarga.")
         ],
-        "voice": "Tahukah kamu? Teknologi AI bisa digunakan untuk meniru suara. Karena itu, jangan langsung percaya jika menerima telepon atau pesan yang meminta uang. Periksa identitas melalui nomor lain sebelum bertindak. Tetap waspada dan ikuti AI PINTAR.",
+        "voice": "Teknologi AI bisa digunakan untuk membuat suara tiruan dan membantu penipu menyamar sebagai orang lain. Karena itu, jangan langsung percaya pada telepon atau pesan yang terdengar mendesak, meskipun suaranya mirip keluarga atau teman. Jika ada permintaan uang, kode OTP, atau informasi rahasia, berhenti sejenak. Hubungi orang tersebut melalui nomor yang sudah kamu kenal, bukan nomor yang menghubungimu. Buat kata sandi keluarga untuk keadaan darurat dan selalu periksa kebenaran cerita. Jangan terburu-buru mengambil keputusan. Bagikan informasi ini agar orang terdekat juga waspada. Ikuti AI PINTAR untuk belajar keamanan digital.",
         "caption": "Waspada penipuan digital. Suara bisa ditiru dengan AI. Selalu verifikasi sebelum mengirim uang. #AIPINTAR #KeamananDigital #LiterasiDigital"
     },
     {
@@ -91,7 +91,7 @@ TOPICS = [
             ("GUNAKAN AKAL SEHAT", "Nilai informasi sebelum digunakan."),
             ("PAKAI AI DENGAN BIJAK", "AI membantu, manusia tetap memutuskan.")
         ],
-        "voice": "Jangan menganggap semua jawaban AI pasti benar. AI bisa memberikan informasi yang keliru. Periksa fakta dan bandingkan dengan sumber tepercaya. Gunakan penilaianmu sebelum mengambil keputusan. Ikuti AI PINTAR untuk belajar AI.",
+        "voice": "Jawaban dari AI tidak selalu benar, meskipun terdengar yakin dan disampaikan dengan bahasa yang rapi. AI bisa salah memahami pertanyaan, menggunakan informasi yang sudah lama, atau membuat detail yang sebenarnya tidak ada. Karena itu, jangan langsung menyalin jawabannya untuk tugas, pekerjaan, atau keputusan penting. Periksa fakta utama melalui sumber yang tepercaya, terutama angka, tanggal, nama, dan aturan. Jika topiknya penting, bandingkan lebih dari satu sumber. Gunakan AI untuk membantu memahami informasi, tetapi tetap gunakan penilaianmu sendiri. Ingat, tanggung jawab atas keputusan akhir ada pada manusia. Ikuti AI PINTAR untuk belajar AI secara bijak.",
         "caption": "AI bisa keliru. Periksa fakta dan bandingkan jawaban dengan sumber tepercaya sebelum digunakan. #AIPINTAR #TipsAI"
     }
 ]
@@ -230,6 +230,11 @@ def main():
         capture_output=True, text=True, check=True
     )
     total = float(probe.stdout.strip()) + 0.5
+    print(f"DURASI NARASI: {total:.1f} detik")
+    if total < 30 or total > 45:
+        print("PERINGATAN: Durasi narasi di luar target AI PINTAR (30-45 detik).")
+    else:
+        print("DURASI SESUAI STANDAR AI PINTAR (30-45 detik).")
     duration = total / len(topic["scenes"])
 
     clips = []
