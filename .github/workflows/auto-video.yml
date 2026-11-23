@@ -1,0 +1,26 @@
+
+name: AI PINTAR Auto Video
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil kode repository
+        uses: actions/checkout@v4
+
+      - name: Siapkan Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Jalankan mesin video
+        run: |
+          echo "AI PINTAR Auto Video siap diuji"
+          echo "Menunggu mesin produksi video dipasang"
