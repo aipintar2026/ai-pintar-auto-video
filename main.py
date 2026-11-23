@@ -4,6 +4,7 @@ import os
 import subprocess
 import urllib.parse
 import urllib.request
+import urllib.error
 from pathlib import Path
 from datetime import date
 from PIL import Image, ImageDraw, ImageFont
@@ -143,7 +144,7 @@ def make_overlay(number, heading, subtitle, path):
     im.save(path)
 
 def pixabay_video(api_key, query, destination):
-    """Cari dan unduh satu footage Pixabay; tampilkan detail jika API menolak."""
+    """Ambil footage dari Pixabay dan tampilkan detail error tanpa membocorkan API key."""
     params = urllib.parse.urlencode({
         "key": api_key,
         "q": query,
@@ -152,13 +153,13 @@ def pixabay_video(api_key, query, destination):
         "safesearch": "true"
     })
     url = API_URL + "?" + params
-    req = urllib.request.Request(
+    request = urllib.request.Request(
         url,
         headers={"User-Agent": "AI-PINTAR-Video/1.0"}
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=35) as response:
+        with urllib.request.urlopen(request, timeout=35) as response:
             data = json.loads(response.read().decode("utf-8"))
 
         hits = data.get("hits", [])
@@ -169,38 +170,38 @@ def pixabay_video(api_key, query, destination):
 
         for hit in hits:
             formats = hit.get("videos", {})
-            chosen = (
+            selected = (
                 formats.get("medium")
                 or formats.get("large")
                 or formats.get("small")
             )
-            if not chosen or not chosen.get("url"):
+            if not selected or not selected.get("url"):
                 continue
 
-            video_url = chosen["url"]
-            request = urllib.request.Request(
+            video_url = selected["url"]
+            video_request = urllib.request.Request(
                 video_url,
                 headers={"User-Agent": "Mozilla/5.0"}
             )
-            with urllib.request.urlopen(request, timeout=90) as response:
-                content = response.read()
+            with urllib.request.urlopen(video_request, timeout=90) as response:
+                video_data = response.read()
 
-            if len(content) > 100_000:
-                Path(destination).write_bytes(content)
+            if len(video_data) > 100_000:
+                Path(destination).write_bytes(video_data)
                 return
 
         raise RuntimeError(
-            f"Pixabay menemukan hasil, tetapi video tidak dapat diunduh: {query}"
+            f"Pixabay menemukan hasil, tetapi footage tidak dapat diunduh: {query}"
         )
 
     except urllib.error.HTTPError as error:
-        # Jangan cetak URL permintaan karena URL itu memuat API key.
+        # Jangan mencetak URL permintaan karena URL tersebut memuat API key.
         detail = error.read().decode("utf-8", errors="replace")
         print(f"PIXABAY HTTP ERROR: {error.code}")
         print(f"PIXABAY DETAIL: {detail[:2000]}")
         raise RuntimeError(
-            f"Pixabay menolak permintaan (HTTP {error.code}). "
-            "Periksa detail PIXABAY DETAIL pada log Actions."
+            f"Permintaan Pixabay ditolak (HTTP {error.code}). "
+            "Lihat PIXABAY DETAIL beberapa baris di atas pada log Actions."
         ) from error
     except urllib.error.URLError as error:
         print(f"PIXABAY CONNECTION ERROR: {error.reason}")
