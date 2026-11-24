@@ -1,6 +1,8 @@
 import asyncio
 import json
 import os
+import random
+import time
 import subprocess
 import urllib.parse
 import urllib.request
@@ -143,157 +145,112 @@ def make_overlay(number, heading, subtitle, path):
     d.text((95, 1770), "Ikuti AI PINTAR untuk tips AI", font=get_font(34, True), fill=(255, 255, 255, 255))
     im.save(path)
 
-def pixabay_video(api_key, query, destination):
-    """Ambil footage dari Pixabay dan tampilkan detail error tanpa membocorkan API key."""
+def pixabay_video(api_key, query, destination, used_ids):
+    """Unduh klip Pixabay yang belum dipakai; coba beberapa hasil dan retry jaringan."""
     params = urllib.parse.urlencode({
         "key": api_key,
         "q": query,
-        "per_page": 20,
+        "per_page": 50,
         "video_type": "film",
         "safesearch": "true"
     })
     url = API_URL + "?" + params
-    request = urllib.request.Request(
-        url,
-        headers={"User-Agent": "AI-PINTAR-Video/1.0"}
-    )
+    last_error = None
 
-    try:
-        with urllib.request.urlopen(request, timeout=35) as response:
-            data = json.loads(response.read().decode("utf-8"))
-
-        hits = data.get("hits", [])
-        if not hits:
-            raise RuntimeError(
-                f"Pixabay tidak menemukan footage untuk pencarian: {query}"
+    for attempt in range(1, 4):
+        try:
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "AI-PINTAR-Video/1.0"}
             )
+            with urllib.request.urlopen(request, timeout=45) as response:
+                data = json.loads(response.read().decode("utf-8"))
 
-        for hit in hits:
-            formats = hit.get("videos", {})
-            selected = (
-                formats.get("medium")
-                or formats.get("large")
-                or formats.get("small")
-            )
-            if not selected or not selected.get("url"):
-                continue
-
-            video_url = selected["url"]
-            video_request = urllib.request.Request(
-                video_url,
-                headers={"User-Agent": "Mozilla/5.0"}
-            )
-            with urllib.request.urlopen(video_request, timeout=90) as response:
-                video_data = response.read()
-
-            if len(video_data) > 100_000:
-                Path(destination).write_bytes(video_data)
-                return
-
-        raise RuntimeError(
-            f"Pixabay menemukan hasil, tetapi footage tidak dapat diunduh: {query}"
-        )
-
-    except urllib.error.HTTPError as error:
-        # Jangan mencetak URL permintaan karena URL tersebut memuat API key.
-        detail = error.read().decode("utf-8", errors="replace")
-        print(f"PIXABAY HTTP ERROR: {error.code}")
-        print(f"PIXABAY DETAIL: {detail[:2000]}")
-        raise RuntimeError(
-            f"Permintaan Pixabay ditolak (HTTP {error.code}). "
-            "Lihat PIXABAY DETAIL beberapa baris di atas pada log Actions."
-        ) from error
-    except urllib.error.URLError as error:
-        print(f"PIXABAY CONNECTION ERROR: {error.reason}")
-        raise
-
-
-
-def validate_topics():
-    """Memeriksa kelengkapan struktur data topik sebelum produksi."""
-    if not TOPICS:
-        raise RuntimeError("QC GAGAL: daftar TOPICS kosong.")
-
-    for index, topic in enumerate(TOPICS, start=1):
-        required = ("title", "queries", "scenes", "voice", "caption")
-        missing = [key for key in required if not topic.get(key)]
-        if missing:
-            raise RuntimeError(
-                f"QC GAGAL: topik ke-{index} tidak memiliki: {', '.join(missing)}"
-            )
-
-        if len(topic["scenes"]) != 5 or len(topic["queries"]) != 5:
-            raise RuntimeError(
-                f"QC GAGAL: topik '{topic['title']}' harus memiliki "
-                "tepat 5 scenes dan 5 queries."
-            )
-
-        for scene_number, scene in enumerate(topic["scenes"], start=1):
-            if not isinstance(scene, (tuple, list)) or len(scene) != 2:
-                raise RuntimeError(
-                    f"QC GAGAL: format adegan {scene_number} pada "
-                    f"topik '{topic['title']}' tidak valid."
+            hits = data.get("hits", [])
+            candidates = [
+                hit for hit in hits
+                if str(hit.get("id", "")) not in used_ids
+                and any(
+                    hit.get("videos", {}).get(size, {}).get("url")
+                    for size in ("medium", "large", "small")
                 )
-            if not all(str(part).strip() for part in scene):
-                raise RuntimeError(
-                    f"QC GAGAL: judul/subjudul adegan {scene_number} "
-                    f"pada topik '{topic['title']}' kosong."
+            ]
+            random.shuffle(candidates)
+
+            for hit in candidates:
+                formats = hit.get("videos", {})
+                selected = (
+                    formats.get("medium")
+                    or formats.get("large")
+                    or formats.get("small")
                 )
+                if not selected or not selected.get("url"):
+                    continue
 
-    print(f"QC STRUKTUR: {len(TOPICS)} topik lengkap, masing-masing 5 adegan.")
+                video_request = urllib.request.Request(
+                    selected["url"], headers={"User-Agent": "Mozilla/5.0"}
+                )
+                try:
+                    with urllib.request.urlopen(video_request, timeout=90) as response:
+                        video_data = response.read()
+                except Exception as download_error:
+                    print(f"Footage ID {hit.get('id')} gagal diunduh; mencoba hasil lain.")
+                    last_error = download_error
+                    continue
 
+                if len(video_data) > 100_000:
+                    Path(destination).write_bytes(video_data)
+                    clip_id = str(hit.get("id", ""))
+                    if clip_id:
+                        used_ids.add(clip_id)
+                    print(f"FOOTAGE TERPILIH: ID {clip_id or 'tidak tersedia'}")
+                    return clip_id
 
-def quality_control_video(video_path):
-    """Memeriksa hasil MP4 final: file, durasi, resolusi, dan audio."""
-    video_path = Path(video_path)
+            if not candidates:
+                raise RuntimeError(
+                    f"Tidak ditemukan footage baru untuk '{query}' yang belum pernah dipakai. "
+                    "Riwayat klip tetap dipertahankan agar tidak mengulang footage."
+                )
+            raise RuntimeError(
+                f"Semua footage yang ditemukan gagal diunduh untuk pencarian: {query}"
+            )
 
-    if not video_path.exists():
-        raise RuntimeError("QC GAGAL: file MP4 tidak ditemukan.")
-    if video_path.stat().st_size < 100_000:
-        raise RuntimeError("QC GAGAL: ukuran MP4 terlalu kecil atau file kosong.")
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode("utf-8", errors="replace")
+            print(f"PIXABAY HTTP ERROR: {error.code}")
+            print(f"PIXABAY DETAIL: {detail[:1000]}")
+            if error.code not in (429, 500, 502, 503, 504):
+                raise RuntimeError(
+                    f"Pixabay menolak permintaan (HTTP {error.code})."
+                ) from error
+            last_error = error
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            print(f"PIXABAY CONNECTION ERROR percobaan {attempt}/3: {error}")
+            last_error = error
 
-    probe = subprocess.run(
-        [
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration:stream=codec_type,width,height",
-            "-of", "json", str(video_path)
-        ],
-        capture_output=True, text=True, check=True
-    )
-    metadata = json.loads(probe.stdout)
-    duration = float(metadata.get("format", {}).get("duration", 0))
-    streams = metadata.get("streams", [])
+        if attempt < 3:
+            time.sleep(attempt * 4)
 
-    video_streams = [stream for stream in streams if stream.get("codec_type") == "video"]
-    audio_streams = [stream for stream in streams if stream.get("codec_type") == "audio"]
-
-    if not video_streams:
-        raise RuntimeError("QC GAGAL: stream video tidak ditemukan.")
-    if not audio_streams:
-        raise RuntimeError("QC GAGAL: audio/narasi tidak ditemukan.")
-
-    video_stream = video_streams[0]
-    width = int(video_stream.get("width", 0))
-    height = int(video_stream.get("height", 0))
-
-    if (width, height) != (1080, 1920):
-        raise RuntimeError(
-            f"QC GAGAL: resolusi {width}x{height}; target 1080x1920."
-        )
-    if not 30 <= duration <= 46:
-        raise RuntimeError(
-            f"QC GAGAL: durasi akhir {duration:.1f} detik; target 30–45 detik."
-        )
-
-    print("QC VIDEO: LULUS")
-    print(f"QC DURASI: {duration:.1f} detik")
-    print(f"QC RESOLUSI: {width}x{height}")
-    print("QC AUDIO: ditemukan")
-    print(f"QC UKURAN FILE: {video_path.stat().st_size / (1024 * 1024):.1f} MB")
+    raise RuntimeError(f"Pixabay gagal setelah 3 percobaan: {last_error}")
 
 
 async def create_voice(text, output_file):
-    await edge_tts.Communicate(text=text, voice=VOICE, rate="+0%", volume="+0%").save(str(output_file))
+    """Buat narasi dengan retry jika layanan Edge TTS sementara tidak terjangkau."""
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            await edge_tts.Communicate(
+                text=text, voice=VOICE, rate="+0%", volume="+0%"
+            ).save(str(output_file))
+            if Path(output_file).exists() and Path(output_file).stat().st_size > 10_000:
+                print(f"EDGE TTS: narasi berhasil dibuat pada percobaan {attempt}.")
+                return
+            raise RuntimeError("File audio tidak terbentuk atau terlalu kecil.")
+        except Exception as error:
+            last_error = error
+            print(f"EDGE TTS gagal pada percobaan {attempt}/3: {error}")
+            if attempt < 3:
+                await asyncio.sleep(attempt * 5)
+    raise RuntimeError(f"Edge TTS gagal setelah 3 percobaan: {last_error}")
 
 def main():
     validate_topics()
@@ -304,6 +261,18 @@ def main():
     output_dir, work_dir = root / "output", root / "work"
     output_dir.mkdir(exist_ok=True)
     work_dir.mkdir(exist_ok=True)
+
+    # Riwayat footage disimpan di .cache dan dipulihkan oleh GitHub Actions cache.
+    history_dir = root / ".cache"
+    history_dir.mkdir(exist_ok=True)
+    history_file = history_dir / "pixabay-history.json"
+    if history_file.exists():
+        try:
+            used_ids = set(json.loads(history_file.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            used_ids = set()
+    else:
+        used_ids = set()
 
     # Rotasi topik harian
     topic = TOPICS[date.today().timetuple().tm_yday % len(TOPICS)]
@@ -329,7 +298,7 @@ def main():
         overlay = work_dir / f"overlay_{i}.png"
         rendered = work_dir / f"scene_{i}.mp4"
         print(f"Mengambil footage {i}/5: {query}")
-        pixabay_video(api_key, query, raw)
+        pixabay_video(api_key, query, raw, used_ids)
         make_overlay(i, heading, subtitle, overlay)
         run_cmd([
             "ffmpeg", "-y", "-stream_loop", "-1", "-i", str(raw), "-loop", "1", "-i", str(overlay),
@@ -353,6 +322,11 @@ def main():
         "-shortest", "-movflags", "+faststart", str(output)
     ])
     quality_control_video(output)
+    history_file.write_text(
+        json.dumps(sorted(used_ids), ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    print(f"RIWAYAT FOOTAGE: {len(used_ids)} ID tersimpan.")
     (output_dir / "caption.txt").write_text(topic["caption"], encoding="utf-8")
     print(f"BERHASIL: {output}")
     print(f"TOPIK: {topic['title']}")
