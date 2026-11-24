@@ -128,7 +128,7 @@ def make_overlay(number, heading, subtitle, path):
     d = ImageDraw.Draw(im)
     # Panel transparan agar footage tetap terlihat
     d.rounded_rectangle((55, 95, 1025, 250), 38, fill=(5, 20, 45, 205), outline=(60, 165, 255, 235), width=4)
-    d.text((95, 145), "AI PINTAR  •  BELAJAR AI DARI DASAR", font=get_font( thirty := 30, True), fill=(235, 247, 255, 255))
+    d.text((95, 145), "AI PINTAR • EDUKASI AI", font=get_font( thirty := 30, True), fill=(235, 247, 255, 255))
     d.rounded_rectangle((55, 1190, 1025, 1665), 45, fill=(4, 18, 42, 215), outline=(55, 145, 225, 240), width=4)
     d.text((100, 1235), f"0{number} / 05", font=get_font(34, True), fill=(90, 195, 255, 255))
     y = 1300
