@@ -176,6 +176,9 @@ jobs:
               channelId: {json.dumps(facebook["id"])}
               schedulingType: automatic
               mode: addToQueue
+              metadata: {{
+                facebook: {{ type: post }}
+              }}
               assets: [{{
                 video: {{
                   url: {json.dumps(video_url)}
