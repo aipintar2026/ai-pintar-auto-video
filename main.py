@@ -233,6 +233,91 @@ def pixabay_video(api_key, query, destination, used_ids):
     raise RuntimeError(f"Pixabay gagal setelah 3 percobaan: {last_error}")
 
 
+
+def validate_topics():
+    """Memeriksa kelengkapan struktur topik sebelum produksi."""
+    if not TOPICS:
+        raise RuntimeError("QC GAGAL: daftar TOPICS kosong.")
+
+    for index, topic in enumerate(TOPICS, start=1):
+        required = ("title", "queries", "scenes", "voice", "caption")
+        missing = [key for key in required if not topic.get(key)]
+        if missing:
+            raise RuntimeError(
+                f"QC GAGAL: topik ke-{index} tidak memiliki: {', '.join(missing)}"
+            )
+
+        if len(topic["scenes"]) != 5 or len(topic["queries"]) != 5:
+            raise RuntimeError(
+                f"QC GAGAL: topik '{topic['title']}' harus memiliki "
+                "tepat 5 scenes dan 5 queries."
+            )
+
+        for scene_number, scene in enumerate(topic["scenes"], start=1):
+            if not isinstance(scene, (tuple, list)) or len(scene) != 2:
+                raise RuntimeError(
+                    f"QC GAGAL: format adegan {scene_number} pada "
+                    f"topik '{topic['title']}' tidak valid."
+                )
+            if not all(str(part).strip() for part in scene):
+                raise RuntimeError(
+                    f"QC GAGAL: judul/subjudul adegan {scene_number} "
+                    f"pada topik '{topic['title']}' kosong."
+                )
+
+    print(f"QC STRUKTUR: {len(TOPICS)} topik lengkap, masing-masing 5 adegan.")
+
+
+def quality_control_video(video_path):
+    """Memeriksa file MP4 final: durasi, resolusi, dan audio."""
+    video_path = Path(video_path)
+
+    if not video_path.exists():
+        raise RuntimeError("QC GAGAL: file MP4 tidak ditemukan.")
+    if video_path.stat().st_size < 100_000:
+        raise RuntimeError("QC GAGAL: ukuran MP4 terlalu kecil atau file kosong.")
+
+    probe = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration:stream=codec_type,width,height",
+            "-of", "json", str(video_path)
+        ],
+        capture_output=True, text=True, check=True
+    )
+    metadata = json.loads(probe.stdout)
+    duration = float(metadata.get("format", {}).get("duration", 0))
+    streams = metadata.get("streams", [])
+
+    video_streams = [x for x in streams if x.get("codec_type") == "video"]
+    audio_streams = [x for x in streams if x.get("codec_type") == "audio"]
+
+    if not video_streams:
+        raise RuntimeError("QC GAGAL: stream video tidak ditemukan.")
+    if not audio_streams:
+        raise RuntimeError("QC GAGAL: audio/narasi tidak ditemukan.")
+
+    video_stream = video_streams[0]
+    width = int(video_stream.get("width", 0))
+    height = int(video_stream.get("height", 0))
+
+    if (width, height) != (1080, 1920):
+        raise RuntimeError(
+            f"QC GAGAL: resolusi {width}x{height}; target 1080x1920."
+        )
+    if not 30 <= duration <= 46:
+        raise RuntimeError(
+            f"QC GAGAL: durasi akhir {duration:.1f} detik; target 30–45 detik "
+            "dengan toleransi render."
+        )
+
+    print("QC VIDEO: LULUS")
+    print(f"QC DURASI: {duration:.1f} detik")
+    print(f"QC RESOLUSI: {width}x{height}")
+    print("QC AUDIO: ditemukan")
+    print(f"QC UKURAN FILE: {video_path.stat().st_size / (1024 * 1024):.1f} MB")
+
+
 async def create_voice(text, output_file):
     """Buat narasi dengan retry jika layanan Edge TTS sementara tidak terjangkau."""
     last_error = None
