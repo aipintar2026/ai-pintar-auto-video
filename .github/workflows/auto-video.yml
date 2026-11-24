@@ -61,12 +61,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload video ke Cloudinary dan jadwalkan di Buffer
+      - name: Upload video ke Cloudinary dan jadwalkan Facebook melalui Buffer
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: |
           python - <<'PY'
           import json
@@ -76,8 +77,10 @@ jobs:
           import requests
 
           required = [
-              "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY",
-              "CLOUDINARY_API_SECRET", "BUFFER_ACCESS_TOKEN"
+              "CLOUDINARY_CLOUD_NAME",
+              "CLOUDINARY_API_KEY",
+              "CLOUDINARY_API_SECRET",
+              "BUFFER_ACCESS_TOKEN",
           ]
           missing = [key for key in required if not os.getenv(key)]
           if missing:
@@ -86,91 +89,120 @@ jobs:
           video_path = Path("output/ai_pintar_video.mp4")
           caption = Path("output/caption.txt").read_text(encoding="utf-8").strip()
           if not caption:
-              sys.exit("caption.txt kosong; posting dibatalkan.")
+              sys.exit("caption.txt kosong; penjadwalan dibatalkan.")
 
-          # Upload video ke Cloudinary (public URL yang tetap tersedia untuk jadwal Buffer).
+          # Unggah MP4 ke Cloudinary agar Buffer menerima URL video publik.
           cloud = os.environ["CLOUDINARY_CLOUD_NAME"]
           upload_url = f"https://api.cloudinary.com/v1_1/{cloud}/video/upload"
           with video_path.open("rb") as file:
               upload = requests.post(
                   upload_url,
-                  auth=(os.environ["CLOUDINARY_API_KEY"], os.environ["CLOUDINARY_API_SECRET"]),
+                  auth=(
+                      os.environ["CLOUDINARY_API_KEY"],
+                      os.environ["CLOUDINARY_API_SECRET"],
+                  ),
                   data={
                       "folder": "ai-pintar",
-                      "public_id": f"ai-pintar-{os.environ.get('GITHUB_RUN_NUMBER', 'video')}",
-                      "overwrite": "true"
+                      "public_id": f"ai-pintar-{os.environ['GITHUB_RUN_NUMBER']}",
+                      "overwrite": "true",
                   },
                   files={"file": (video_path.name, file, "video/mp4")},
-                  timeout=900
+                  timeout=900,
               )
           upload.raise_for_status()
           video_url = upload.json().get("secure_url")
           if not video_url:
               sys.exit("Cloudinary tidak mengembalikan secure_url.")
 
-          # Buffer GraphQL helper.
+          # Buffer GraphQL.
           headers = {
               "Authorization": "Bearer " + os.environ["BUFFER_ACCESS_TOKEN"],
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
           }
+
           def gql(query):
-              r = requests.post("https://api.buffer.com", headers=headers,
-                                json={"query": query}, timeout=60)
-              r.raise_for_status()
-              body = r.json()
+              response = requests.post(
+                  "https://api.buffer.com",
+                  headers=headers,
+                  json={"query": query},
+                  timeout=60,
+              )
+              response.raise_for_status()
+              body = response.json()
               if body.get("errors"):
                   raise RuntimeError(json.dumps(body["errors"], ensure_ascii=False))
               return body.get("data", {})
 
           account = gql("query { account { organizations { id name } } }")
-          orgs = account.get("account", {}).get("organizations", [])
-          if not orgs:
+          organizations = account.get("account", {}).get("organizations", [])
+          if not organizations:
               sys.exit("Organisasi Buffer tidak ditemukan.")
-          org_id = orgs[0]["id"]
+          organization_id = organizations[0]["id"]
+
           channels_query = (
-              "query { channels(input: { organizationId: " + json.dumps(org_id) +
-              " }) { id name displayName service } }"
+              "query { channels(input: { organizationId: "
+              + json.dumps(organization_id)
+              + " }) { id name displayName service } }"
           )
           channels = gql(channels_query).get("channels", [])
-          targets = {"tiktok": None, "facebook": None}
-          for channel in channels:
-              service = (channel.get("service") or "").lower()
-              if service in targets and targets[service] is None:
-                  targets[service] = channel
-          missing_channels = [key for key, value in targets.items() if value is None]
-          if missing_channels:
-              sys.exit("Channel Buffer tidak ditemukan: " + ", ".join(missing_channels))
 
-          # Satu post per channel, masuk ke slot antrean Buffer berikutnya.
-          for service in ("tiktok", "facebook"):
-              channel = targets[service]
-              mutation = f'''
-              mutation {{
-                createPost(input: {{
-                  text: {json.dumps(caption, ensure_ascii=False)}
-                  channelId: {json.dumps(channel["id"])}
-                  schedulingType: automatic
-                  mode: addToQueue
-                  assets: [{{
-                    video: {{
-                      url: {json.dumps(video_url)}
-                      metadata: {{ thumbnailOffset: 1000 }}
-                    }}
-                  }}]
-                }}) {{
-                  ... on PostActionSuccess {{ post {{ id dueAt status }} }}
-                  ... on MutationError {{ message }}
+          # Untuk saat ini hanya Facebook yang dijadwalkan melalui Buffer.
+          # TikTok tidak disentuh agar jadwal TikTok yang sudah ada tetap aman.
+          facebook = next(
+              (
+                  channel
+                  for channel in channels
+                  if (channel.get("service") or "").lower() == "facebook"
+              ),
+              None,
+          )
+          if facebook is None:
+              available = [
+                  {
+                      "name": channel.get("displayName") or channel.get("name"),
+                      "service": channel.get("service"),
+                  }
+                  for channel in channels
+              ]
+              sys.exit(
+                  "Channel Facebook tidak ditemukan di Buffer. "
+                  + json.dumps(available, ensure_ascii=False)
+              )
+
+          mutation = f'''
+          mutation {{
+            createPost(input: {{
+              text: {json.dumps(caption, ensure_ascii=False)}
+              channelId: {json.dumps(facebook["id"])}
+              schedulingType: automatic
+              mode: addToQueue
+              assets: [{{
+                video: {{
+                  url: {json.dumps(video_url)}
+                  metadata: {{ thumbnailOffset: 1000 }}
                 }}
-              }}
-              '''
-              result = gql(mutation).get("createPost", {})
-              if result.get("message") or not result.get("post"):
-                  raise RuntimeError(
-                      f"Buffer {service} gagal: " +
-                      json.dumps(result, ensure_ascii=False)
-                  )
-              post = result["post"]
-              print(f"BUFFER OK {service}: id={post.get('id')} dueAt={post.get('dueAt')} status={post.get('status')}")
+              }}]
+            }}) {{
+              ... on PostActionSuccess {{ post {{ id dueAt status }} }}
+              ... on MutationError {{ message }}
+            }}
+          }}
+          '''
+          result = gql(mutation).get("createPost", {})
+          if result.get("message") or not result.get("post"):
+              raise RuntimeError(
+                  "Buffer Facebook gagal: "
+                  + json.dumps(result, ensure_ascii=False)
+              )
 
-          print("SELESAI: video tersimpan di Cloudinary dan masuk antrean Buffer.")
+          post = result["post"]
+          print(
+              "BUFFER FACEBOOK OK: "
+              f"id={post.get('id')} dueAt={post.get('dueAt')} "
+              f"status={post.get('status')}"
+          )
+          print(
+              "SELESAI: video tersimpan di Cloudinary dan masuk antrean Facebook Buffer. "
+              "TikTok tidak diubah."
+          )
           PY
