@@ -1,4 +1,3 @@
-
 name: AI PINTAR Auto Video
 
 on:
@@ -12,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Ambil kode repository
@@ -22,6 +21,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Pulihkan riwayat footage Pixabay
+        uses: actions/cache@v4
+        with:
+          path: .cache/pixabay-history.json
+          key: pixabay-history-${{ github.run_id }}
+          restore-keys: |
+            pixabay-history-
 
       - name: Pasang FFmpeg
         run: |
@@ -33,17 +40,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Jalankan mesin pembuat video
+      - name: Jalankan mesin pembuat video dan QC
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         run: |
           python main.py
           test -f output/ai_pintar_video.mp4
+          test -f output/caption.txt
 
-      - name: Simpan hasil video MP4
+      - name: Simpan hasil video dan caption
         uses: actions/upload-artifact@v4
         with:
           name: AI-PINTAR-Video
-          path: output/ai_pintar_video.mp4
+          path: |
+            output/ai_pintar_video.mp4
+            output/caption.txt
           if-no-files-found: error
           retention-days: 7
