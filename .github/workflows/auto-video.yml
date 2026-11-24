@@ -61,7 +61,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload video ke Cloudinary dan jadwalkan Facebook melalui Buffer
+      - name: Upload video ke Cloudinary dan jadwalkan Facebook serta TikTok melalui Buffer
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
@@ -146,66 +146,82 @@ jobs:
           )
           channels = gql(channels_query).get("channels", [])
 
-          # Untuk saat ini hanya Facebook yang dijadwalkan melalui Buffer.
-          # TikTok tidak disentuh agar jadwal TikTok yang sudah ada tetap aman.
+          # Jadwalkan video yang sama ke Facebook dan TikTok.
+          # Setiap channel memakai slot antreannya sendiri di Buffer.
           facebook = next(
-              (
-                  channel
-                  for channel in channels
-                  if (channel.get("service") or "").lower() == "facebook"
-              ),
+              (c for c in channels if (c.get("service") or "").lower() == "facebook"),
               None,
           )
+          tiktok = next(
+              (c for c in channels if (c.get("service") or "").lower() == "tiktok"),
+              None,
+          )
+
+          missing = []
           if facebook is None:
+              missing.append("Facebook")
+          if tiktok is None:
+              missing.append("TikTok")
+          if missing:
               available = [
                   {
-                      "name": channel.get("displayName") or channel.get("name"),
-                      "service": channel.get("service"),
+                      "name": c.get("displayName") or c.get("name"),
+                      "service": c.get("service"),
                   }
-                  for channel in channels
+                  for c in channels
               ]
               sys.exit(
-                  "Channel Facebook tidak ditemukan di Buffer. "
+                  "Channel tidak ditemukan: " + ", ".join(missing)
+                  + ". Channel tersedia: "
                   + json.dumps(available, ensure_ascii=False)
               )
 
-          mutation = f'''
-          mutation {{
-            createPost(input: {{
-              text: {json.dumps(caption, ensure_ascii=False)}
-              channelId: {json.dumps(facebook["id"])}
-              schedulingType: automatic
-              mode: addToQueue
-              metadata: {{
-                facebook: {{ type: post }}
-              }}
-              assets: [{{
-                video: {{
-                  url: {json.dumps(video_url)}
-                  metadata: {{ thumbnailOffset: 1000 }}
+          def create_video_post(channel, service):
+              if service == "facebook":
+                  metadata = "metadata: { facebook: { type: post } }"
+              else:
+                  # Disclosure AI untuk video yang dibuat dengan bantuan AI.
+                  metadata = "metadata: { tiktok: { isAiGenerated: true } }"
+
+              mutation = f"""
+              mutation {{
+                createPost(input: {{
+                  text: {json.dumps(caption, ensure_ascii=False)}
+                  channelId: {json.dumps(channel["id"])}
+                  schedulingType: automatic
+                  mode: addToQueue
+                  {metadata}
+                  assets: [{{
+                    video: {{
+                      url: {json.dumps(video_url)}
+                      metadata: {{ thumbnailOffset: 1000 }}
+                    }}
+                  }}]
+                }}) {{
+                  ... on PostActionSuccess {{ post {{ id dueAt status }} }}
+                  ... on MutationError {{ message }}
                 }}
-              }}]
-            }}) {{
-              ... on PostActionSuccess {{ post {{ id dueAt status }} }}
-              ... on MutationError {{ message }}
-            }}
-          }}
-          '''
-          result = gql(mutation).get("createPost", {})
-          if result.get("message") or not result.get("post"):
-              raise RuntimeError(
-                  "Buffer Facebook gagal: "
-                  + json.dumps(result, ensure_ascii=False)
+              }}
+              """
+              result = gql(mutation).get("createPost", {})
+              if result.get("message") or not result.get("post"):
+                  raise RuntimeError(
+                      f"Buffer {service} gagal: "
+                      + json.dumps(result, ensure_ascii=False)
+                  )
+              post = result["post"]
+              print(
+                  f"BUFFER {service.upper()} OK: "
+                  f"id={post.get('id')} dueAt={post.get('dueAt')} "
+                  f"status={post.get('status')}"
               )
 
-          post = result["post"]
+          # Satu per satu agar log mudah diperiksa jika ada kegagalan.
+          create_video_post(facebook, "facebook")
+          create_video_post(tiktok, "tiktok")
+
           print(
-              "BUFFER FACEBOOK OK: "
-              f"id={post.get('id')} dueAt={post.get('dueAt')} "
-              f"status={post.get('status')}"
-          )
-          print(
-              "SELESAI: video tersimpan di Cloudinary dan masuk antrean Facebook Buffer. "
-              "TikTok tidak diubah."
+              "SELESAI: video masuk antrean Facebook dan TikTok Buffer. "
+              "Jam publikasi mengikuti slot antrean masing-masing channel."
           )
           PY
