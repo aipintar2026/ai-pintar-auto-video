@@ -3,16 +3,19 @@ name: AI PINTAR Auto Video
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 7 * * *"
+    - cron: "17 7 * * *" # 14:17 WIB
 
 permissions:
   contents: read
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
+concurrency:
+  group: ai-pintar-daily-publish
+  cancel-in-progress: false
 
+jobs:
+  build-and-schedule:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Ambil kode repository
         uses: actions/checkout@v4
@@ -40,20 +43,134 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Jalankan mesin pembuat video dan QC
+      - name: Buat video dan caption
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
         run: |
           python main.py
-          test -f output/ai_pintar_video.mp4
-          test -f output/caption.txt
+          test -s output/ai_pintar_video.mp4
+          test -s output/caption.txt
 
-      - name: Simpan hasil video dan caption
+      - name: Simpan salinan MP4 dan caption
         uses: actions/upload-artifact@v4
         with:
-          name: AI-PINTAR-Video
+          name: AI-PINTAR-${{ github.run_number }}
           path: |
             output/ai_pintar_video.mp4
             output/caption.txt
           if-no-files-found: error
           retention-days: 7
+
+      - name: Upload video ke Cloudinary dan jadwalkan di Buffer
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          BUFFER_ACCESS_TOKEN: ${{ secrets.BUFFER_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          import requests
+
+          required = [
+              "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY",
+              "CLOUDINARY_API_SECRET", "BUFFER_ACCESS_TOKEN"
+          ]
+          missing = [key for key in required if not os.getenv(key)]
+          if missing:
+              sys.exit("Secret belum diisi: " + ", ".join(missing))
+
+          video_path = Path("output/ai_pintar_video.mp4")
+          caption = Path("output/caption.txt").read_text(encoding="utf-8").strip()
+          if not caption:
+              sys.exit("caption.txt kosong; posting dibatalkan.")
+
+          # Upload video ke Cloudinary (public URL yang tetap tersedia untuk jadwal Buffer).
+          cloud = os.environ["CLOUDINARY_CLOUD_NAME"]
+          upload_url = f"https://api.cloudinary.com/v1_1/{cloud}/video/upload"
+          with video_path.open("rb") as file:
+              upload = requests.post(
+                  upload_url,
+                  auth=(os.environ["CLOUDINARY_API_KEY"], os.environ["CLOUDINARY_API_SECRET"]),
+                  data={
+                      "folder": "ai-pintar",
+                      "public_id": f"ai-pintar-{os.environ.get('GITHUB_RUN_NUMBER', 'video')}",
+                      "overwrite": "true"
+                  },
+                  files={"file": (video_path.name, file, "video/mp4")},
+                  timeout=900
+              )
+          upload.raise_for_status()
+          video_url = upload.json().get("secure_url")
+          if not video_url:
+              sys.exit("Cloudinary tidak mengembalikan secure_url.")
+
+          # Buffer GraphQL helper.
+          headers = {
+              "Authorization": "Bearer " + os.environ["BUFFER_ACCESS_TOKEN"],
+              "Content-Type": "application/json"
+          }
+          def gql(query):
+              r = requests.post("https://api.buffer.com", headers=headers,
+                                json={"query": query}, timeout=60)
+              r.raise_for_status()
+              body = r.json()
+              if body.get("errors"):
+                  raise RuntimeError(json.dumps(body["errors"], ensure_ascii=False))
+              return body.get("data", {})
+
+          account = gql("query { account { organizations { id name } } }")
+          orgs = account.get("account", {}).get("organizations", [])
+          if not orgs:
+              sys.exit("Organisasi Buffer tidak ditemukan.")
+          org_id = orgs[0]["id"]
+          channels_query = (
+              "query { channels(input: { organizationId: " + json.dumps(org_id) +
+              " }) { id name displayName service } }"
+          )
+          channels = gql(channels_query).get("channels", [])
+          targets = {"tiktok": None, "facebook": None}
+          for channel in channels:
+              service = (channel.get("service") or "").lower()
+              if service in targets and targets[service] is None:
+                  targets[service] = channel
+          missing_channels = [key for key, value in targets.items() if value is None]
+          if missing_channels:
+              sys.exit("Channel Buffer tidak ditemukan: " + ", ".join(missing_channels))
+
+          # Satu post per channel, masuk ke slot antrean Buffer berikutnya.
+          for service in ("tiktok", "facebook"):
+              channel = targets[service]
+              mutation = f'''
+              mutation {{
+                createPost(input: {{
+                  text: {json.dumps(caption, ensure_ascii=False)}
+                  channelId: {json.dumps(channel["id"])}
+                  schedulingType: automatic
+                  mode: addToQueue
+                  assets: [{{
+                    video: {{
+                      url: {json.dumps(video_url)}
+                      metadata: {{ thumbnailOffset: 1000 }}
+                    }}
+                  }}]
+                }}) {{
+                  ... on PostActionSuccess {{ post {{ id dueAt status }} }}
+                  ... on MutationError {{ message }}
+                }}
+              }}
+              '''
+              result = gql(mutation).get("createPost", {})
+              if result.get("message") or not result.get("post"):
+                  raise RuntimeError(
+                      f"Buffer {service} gagal: " +
+                      json.dumps(result, ensure_ascii=False)
+                  )
+              post = result["post"]
+              print(f"BUFFER OK {service}: id={post.get('id')} dueAt={post.get('dueAt')} status={post.get('status')}")
+
+          print("SELESAI: video tersimpan di Cloudinary dan masuk antrean Buffer.")
+          PY
