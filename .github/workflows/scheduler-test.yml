@@ -1,0 +1,17 @@
+name: Scheduler Test AI PINTAR
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  test-scheduler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scheduler Check
+        run: |
+          echo "AI PINTAR Scheduler Test"
+          echo "Scheduler berjalan!"
+          date -u
