@@ -53,9 +53,9 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
     filters.append(f"[bg]subtitles='{sub_path}':force_style='FontSize=42,Outline=2,Shadow=1,MarginV=180,Alignment=2'[sub]")
     if avatar_index is not None:
         if avatar_kind == "video":
-            filters.append(f"[{avatar_index}:v]scale=280:-1,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar]")
+            filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar]")
         else:
-            filters.append(f"[{avatar_index}:v]scale=280:-1,trim=duration={duration:.6f}[avatar]")
+            filters.append(f"[{avatar_index}:v]scale=280:-2,trim=duration={duration:.6f}[avatar]")
         filters.append("[sub][avatar]overlay=W-w-56:120:eof_action=repeat[vout]")
         video_label="vout"
     else:
