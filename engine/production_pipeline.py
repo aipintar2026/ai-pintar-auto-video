@@ -11,6 +11,11 @@ from .publish_guard import check_publish_allowed
 ROOT=Path(__file__).resolve().parent.parent
 
 
+def _publish_content_key(topic_id, caption):
+    """Stable per-topic/caption key so regenerated media cannot bypass reconciliation."""
+    return hashlib.sha256((str(topic_id) + "|" + str(caption).strip()).encode("utf-8")).hexdigest()
+
+
 def _duration(path):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)], text=True).strip())
 
@@ -198,7 +203,7 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
             if not upload_cloudinary:
                 cloud=cloudinary_upload(vid,public_id=f"staging_{topic_id}_{hashlib.sha256(vid.read_bytes()).hexdigest()[:8]}")
                 manifest['cloudinary_result']=cloud
-            manifest['publish_result']=buffer_queue(manifest['cloudinary_result']['secure_url'],caption,channel_ids or [],enabled=True,manifest_path=out/'publish_manifest.json',content_key=hashlib.sha256((topic_id+'|'+hashlib.sha256(vid.read_bytes()).hexdigest()+'|'+caption.strip()).encode()).hexdigest())
+            manifest['publish_result']=buffer_queue(manifest['cloudinary_result']['secure_url'],caption,channel_ids or [],enabled=True,manifest_path=out/'publish_manifest.json',content_key=_publish_content_key(topic_id,caption))
             (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
         return manifest
     except Exception as exc:
