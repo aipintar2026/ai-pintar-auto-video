@@ -79,10 +79,10 @@ def test_prepublish_qc_accepts_valid_srt_and_ass(tmp_path, monkeypatch):
     assert report["subtitle_cues"]==1
 
 @pytest.mark.parametrize("srt,reason", [
-    ("2\\n00:00:00,000 --> 00:00:01,000\\nText\\n", "nomor"),
-    ("1\\n00:00:00,000 --> 00:00:40,000\\nText\\n", "setelah durasi"),
-    ("1\\n00:00:00,000 --> 00:00:01,000\\n" + "x"*35 + "\\n", "keterbacaan"),
-    ("1\\n00:00:00,000 --> 00:00:01,000\\nA\\nB\\nC\\n", "keterbacaan"),
+    ("2\n00:00:00,000 --> 00:00:01,000\nText\n", "nomor"),
+    ("1\n00:00:00,000 --> 00:00:40,000\nText\n", "setelah durasi"),
+    ("1\n00:00:00,000 --> 00:00:01,000\n" + "x"*35 + "\n", "keterbacaan"),
+    ("1\n00:00:00,000 --> 00:00:01,000\nA\nB\nC\n", "keterbacaan"),
 ])
 def test_srt_qc_rejects_sequence_duration_and_readability(tmp_path, srt, reason):
     path=tmp_path/"bad.srt"
