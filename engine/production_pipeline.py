@@ -96,7 +96,7 @@ def _subtitle_chunks(script, max_chars=34, max_lines=2, max_words=14):
 
 
 def caption_and_srt(topic, script, duration, output):
-    caption=f"{topic['title']}\\n\\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
+    caption=f"{topic['title']}\n\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
     Path(output/'caption.txt').write_text(caption,encoding='utf-8')
     chunks=_subtitle_chunks(script)
     weights=[max(1,len(chunk.split())) for chunk in chunks]
@@ -108,11 +108,11 @@ def caption_and_srt(topic, script, duration, output):
         start=elapsed
         elapsed=duration if index==len(chunks) else elapsed+(duration*weight/total)
         wrapped=textwrap.wrap(chunk,width=34,break_long_words=False,break_on_hyphens=False)
-        srt_text="\\n".join(wrapped)
-        cues.append(f"{index}\\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\\n{srt_text}")
-        ass_text=r"\\N".join(wrapped).replace("{",r"\\{").replace("}",r"\\}")
+        srt_text="\n".join(wrapped)
+        cues.append(f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\n{srt_text}")
+        ass_text=r"\N".join(wrapped).replace("{",r"\{").replace("}",r"\}")
         ass_events.append(f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(elapsed)},Default,,0,0,0,,{ass_text}")
-    (Path(output)/'subtitles.srt').write_text("\\n\\n".join(cues)+"\\n",encoding='utf-8')
+    (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding='utf-8')
     ass_header="""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
@@ -126,7 +126,7 @@ Style: Default,DejaVu Sans,34,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
-    (Path(output)/'subtitles.ass').write_text(ass_header+"\\n".join(ass_events)+"\\n",encoding='utf-8')
+    (Path(output)/'subtitles.ass').write_text(ass_header+"\n".join(ass_events)+"\n",encoding='utf-8')
     return caption
 
 def _srt_timestamp(seconds):
