@@ -69,3 +69,7 @@ See `docs/INSTALL_GITHUB.md` for package installation guidance. Confirm that gui
 - No Buffer token or social-publishing secrets are injected into that workflow.
 - Live Pixabay/TTS and Cloudinary checks are separate local CLI actions, not workflow inputs.
 - Do not merge staging into `main` or change AI PINTAR 1 before explicit approval.
+
+## Official presenter master reference
+
+AI PINTAR Host must use the approved master image supplied by the project owner; do not substitute generated or search-result faces. Install the master reference image as `assets/aipintar_host_master.jpg` (preferred), or `assets/presenter_master.jpg`, or `assets/presenter.png`. The production CLI auto-selects the first existing candidate unless `--avatar` is provided explicitly. The current FFmpeg avatar feature is a static/video overlay only: it does not generate facial animation or lip-sync. A master reference image is not committed by this code change; the original owner-provided image must be securely added to the repository asset folder before live render validation.
