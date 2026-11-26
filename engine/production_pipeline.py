@@ -172,11 +172,12 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
     if not key: raise RuntimeError('PIXABAY_API_KEY belum diset.')
     mem=TopicMemory(); selected=mem.choose()
     if selected.get('bank_exhausted'): return selected
-    topic=selected['topic']; topic_id=topic['id']; story=make_story(topic); script=story.narration()
-    (out/'script.txt').write_text(script,encoding='utf-8')
-    media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
-    used_ids=_load_media_ids(media_ids_path)
+    topic=selected['topic']; topic_id=topic['id']
     try:
+        story=make_story(topic); script=story.narration()
+        (out/'script.txt').write_text(script,encoding='utf-8')
+        media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
+        used_ids=_load_media_ids(media_ids_path)
         clips,ids=pixabay_download(topic.get('angle') or topic['title'],key,work,used_ids=used_ids,count=5)
         if len(clips) < 5:
             raise RuntimeError(f'QC: dibutuhkan 5 footage berbeda, hanya {len(clips)} tersedia.')
