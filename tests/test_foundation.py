@@ -46,3 +46,17 @@ def test_corrupt_state_not_silently_reset():
         topics=Path(d)/'topics.json';topics.write_text(json.dumps([{'id':'x','title':'X'}]))
         state=Path(d)/'state.json';state.write_text('broken')
         with __import__('pytest').raises(RuntimeError): TopicMemory(topics,state)
+
+
+def test_topic_memory_mark_failed_releases_topic_and_records_reason():
+    with tempfile.TemporaryDirectory() as d:
+        topics = Path(d)/"topics.json"
+        state = Path(d)/"state.json"
+        topics.write_text(json.dumps([{"id":"a","title":"A"},{"id":"b","title":"B"}]))
+        memory = TopicMemory(topics, state)
+        chosen = memory.choose(seed=0)["topic"]
+        memory.mark_failed(chosen["id"], reason="render_failed")
+        reopened = TopicMemory(topics, state)
+        assert chosen["id"] not in reopened.state["used_ids"]
+        assert reopened.remaining() == 2
+        assert reopened.state["failures"][-1]["reason"] == "render_failed"
