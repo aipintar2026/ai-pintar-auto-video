@@ -30,3 +30,14 @@ def test_story_length_for_all_topics():
         script=make_story(topic).narration()
         assert 650 <= len(script) <= 800
         assert 95 <= len(script.split()) <= 110
+
+def test_subtitles_are_limited_to_two_readable_lines(tmp_path):
+    script=("AI membantu pekerjaan dengan cara yang praktis dan mudah dipahami. " * 12).strip()
+    caption_and_srt({"title":"Test"},script,36.0,tmp_path)
+    blocks=(tmp_path/"subtitles.srt").read_text(encoding="utf-8").strip().split("\\n\\n")
+    assert len(blocks)>1
+    for block in blocks:
+        lines=block.splitlines()[2:]
+        assert 1<=len(lines)<=2
+        assert all(len(line)<=34 for line in lines)
+        assert len(" ".join(lines).split())<=14
