@@ -1,6 +1,6 @@
 # AI PINTAR 2.0 — staging package
 
-**Staging only. This package does not modify or replace AI PINTAR 1. It contains no production schedule and the GitHub staging workflow cannot queue posts.**
+**Staging only. This package does not modify or replace AI PINTAR 1. The staging workflow is manual-only, runs offline tests, and has no publishing secrets or social-queue steps.**
 
 ## What it includes
 
