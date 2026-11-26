@@ -1,15 +1,15 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Verified run:** GitHub Actions run #57  
-**Run ID:** `45763962311`  
-**Commit:** `f2f2e2e15c92af2804621d73b8146ee4df12e5fb`  
+**Latest verified run:** GitHub Actions run #62  
+**Run ID:** \`45773091004\`  
+**Commit:** \`1f720f471d1d5c8e19ea6bda8b427b0ef56504d7\`  
 **Date:** 26 November 2026  
-**Artifact ID:** `15090504326`
+**Artifact ID:** \`15094942814\`
 
 ## Automated tests
 
 - Python compilation: passed.
-- Python test suite: **36 passed**.
+- Python test suite: **38 passed**.
 - Synthetic offline render: passed.
 - Artifact upload: passed.
 
@@ -20,34 +20,35 @@
 - Video: H.264
 - Audio: AAC
 - Caption: present
-- SRT and ASS subtitle files: present; ASS canvas explicitly 1080 × 1920
-- QC report: caption, subtitle, ASS subtitle, audio/video and topic ID passed
-- Presenter overlay: synthetic blue block only (placement path exercised, not a real presenter)
+- SRT/ASS subtitle files: present; ASS canvas explicitly 1080 × 1920
+- QC: audio/video, caption, subtitle, ASS canvas and topic ID passed
+- Subtitle cues: 14
+- Presenter overlay: synthetic block only
 - Music mix: synthetic audio bed exercised
 - Publish: disabled
 - External provider calls: none
 
 ## Manual frame QC
 
-Frames at 5, 15 and 25 seconds were inspected from the run #55 artifact. Subtitles were readable, limited to two lines, bottom-centered, and outside the synthetic avatar overlay. The ASS renderer uses an explicit portrait canvas and fixed safe-area style. This does not validate actual footage, a real presenter, cover/thumbnail quality or semantic subtitle-to-video alignment.
+Frames at 5, 15 and 25 seconds were inspected from an earlier offline artifact (run #55). Subtitles were readable, limited to two lines, bottom-centered and outside the synthetic avatar overlay. The latest run #62 revalidated the corrected SRT parsing, the full test suite and the offline render, but manual frame inspection was not repeated on its artifact.
 
 ## Mocked integration coverage
 
-- Pixabay response/download/fallback selection
-- Edge TTS API call path
-- Cloudinary signed upload request and response validation
-- Buffer channel lookup, GraphQL payload, metadata, scheduling mode, manifest success and duplicate/unknown reconciliation
-- Publish guard
-- Talking-avatar adapter input validation, subprocess/output validation and timeout path
-- Pipeline orchestration, topic recovery after simulated download and script-generation failures
-- Regression test for stable per-topic/caption reconciliation keys across media regeneration
+- Pixabay response/download selection
+- Edge TTS API path
+- Cloudinary signed-upload request and response validation
+- Buffer channel lookup, GraphQL payload, metadata, scheduling mode, manifest success/unknown reconciliation
+- Publish guard and duplicate/unknown reconciliation
+- Talking-avatar adapter validation, timeout and output checks
+- Pipeline orchestration and topic recovery after simulated download/script failures
+- Stable per-topic/caption reconciliation key across media regeneration
 
 ## Not live-validated / remaining
 
 No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used.
 
-The publish reconciliation key is now stable for the same topic ID and caption even if the video is regenerated. This improves local retry safety but does not replace durable manifest storage across ephemeral runners. Durable state across ephemeral runners still requires design. The safety-test workflow is offline-only and does not publish.
+Stable local reconciliation keys improve retry safety but do not replace durable manifest storage across ephemeral runners. Durable state remains a migration prerequisite.
 
 ## Main-branch boundary
 
-The existing `main` production schedule is active and untouched by this staging repair. The latest scheduled run #22 completed successfully; this repair did not trigger or modify it.
+The existing \`main\` production schedule is active and untouched. The staging repair workflow is offline-only and does not queue or publish posts.
