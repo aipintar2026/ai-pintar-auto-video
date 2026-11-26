@@ -25,7 +25,7 @@ def probe_video(path: str):
     return {"duration": duration, "resolution": "1080x1920", "audio": True, "bytes": p.stat().st_size, "video_codec": vids[0].get("codec_name"), "audio_codec": auds[0].get("codec_name")}
 
 
-def _validate_srt(path: Path):
+def _validate_srt(path: Path, video_duration=None):
     text = path.read_text(encoding="utf-8").strip()
     blocks = [b for b in re.split(r"\n\s*\n", text) if b.strip()]
     if not blocks:
@@ -36,18 +36,23 @@ def _validate_srt(path: Path):
         ss, ms = tail.split(",")
         return int(hh)*3600 + int(mm)*60 + int(ss) + int(ms)/1000
     previous_end = 0.0
-    for block in blocks:
+    for expected_number, block in enumerate(blocks, 1):
         lines = block.splitlines()
-        if len(lines) < 3 or not lines[0].strip().isdigit():
-            raise RuntimeError("QC: format blok SRT tidak valid.")
+        if len(lines) < 3 or lines[0].strip() != str(expected_number):
+            raise RuntimeError("QC: nomor atau format blok SRT tidak valid.")
         match = timestamp.match(lines[1].strip())
         if not match:
             raise RuntimeError("QC: timestamp SRT tidak valid.")
         start, end = map(seconds, match.groups())
-        if start < previous_end or end <= start:
+        if start < 0 or start < previous_end or end <= start:
             raise RuntimeError("QC: timestamp SRT tumpang tindih atau durasi cue tidak valid.")
-        if not any(line.strip() for line in lines[2:]):
+        subtitle_lines = [line.strip() for line in lines[2:] if line.strip()]
+        if not subtitle_lines:
             raise RuntimeError("QC: cue SRT tanpa teks.")
+        if len(subtitle_lines) > 2 or any(len(line) > 34 for line in subtitle_lines):
+            raise RuntimeError("QC: subtitle melebihi batas keterbacaan 2 baris/34 karakter.")
+        if video_duration is not None and end > video_duration + 0.25:
+            raise RuntimeError("QC: subtitle berakhir setelah durasi video.")
         previous_end = end
     return len(blocks)
 
@@ -59,7 +64,7 @@ def prepublish_checks(video, caption, topic_id, subtitles):
     for label, path in (("caption", caption_path), ("subtitle", srt_path)):
         if not path.exists() or not path.read_text(encoding="utf-8").strip():
             raise RuntimeError(f"QC: {label} hilang atau kosong.")
-    cue_count = _validate_srt(srt_path)
+    cue_count = _validate_srt(srt_path, video_duration=report["duration"])
     ass_path = srt_path.with_suffix(".ass")
     if not ass_path.exists() or not ass_path.read_text(encoding="utf-8").strip():
         raise RuntimeError("QC: ASS subtitle file hilang atau kosong.")
