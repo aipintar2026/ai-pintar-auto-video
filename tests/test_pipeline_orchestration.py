@@ -75,3 +75,11 @@ def test_pipeline_story_failure_releases_topic(tmp_path,monkeypatch):
     reopened=TopicMemory(tmp_path/"topics.json",state_path)
     assert "topic-a" not in reopened.state["used_ids"]
     assert reopened.state["failures"][-1]["reason"]=="simulated script failure"
+
+
+def test_publish_reconciliation_key_stable_across_media_retries():
+    from engine.production_pipeline import _publish_content_key
+    key1 = _publish_content_key("topic-a", "caption")
+    key2 = _publish_content_key("topic-a", "  caption  ")
+    assert key1 == key2
+    assert key1 != _publish_content_key("topic-b", "caption")
