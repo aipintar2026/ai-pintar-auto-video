@@ -1,6 +1,6 @@
 # AI PINTAR 2.0 — staging package
 
-**Staging only. This package does not modify or replace AI PINTAR 1. The staging workflow is manual-only, runs offline tests, and has no publishing secrets or social-queue steps.**
+**Staging only. This package does not modify or replace AI PINTAR 1. The safety-test workflow runs on pull requests targeting `ai-pintar-2-staging` and manual dispatch. It has no schedule, publishing secrets, or social-queue steps.**
 
 ## What it includes
 
@@ -60,7 +60,7 @@ The helper is included and unit-tested, but **live account/channel testing has n
 
 ## GitHub staging installation
 
-See `docs/INSTALL_GITHUB.md`. It uses a **single ZIP upload** plus a separate manual workflow file so Android/mobile installation does not require uploading nested folders. It must be installed on `ai-pintar-2-staging`, not `main`.
+See `docs/INSTALL_GITHUB.md` for package installation guidance. Confirm that guide's workflow matches the current safety-test workflow before following any installer steps. All staging work must stay on `ai-pintar-2-staging`, not `main`.
 
 ## Safety boundaries
 
