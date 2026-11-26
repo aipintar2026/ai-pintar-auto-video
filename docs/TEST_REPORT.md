@@ -1,15 +1,15 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Verified run:** GitHub Actions run #55  
-**Run ID:** `45763325239`  
-**Commit:** `99e68c0b154485abeacaa6dd8188f6bf64395379`  
+**Verified run:** GitHub Actions run #57  
+**Run ID:** `45763962311`  
+**Commit:** `f2f2e2e15c92af2804621d73b8146ee4df12e5fb`  
 **Date:** 26 November 2026  
-**Artifact ID:** `15091430474`
+**Artifact ID:** `15090504326`
 
 ## Automated tests
 
 - Python compilation: passed.
-- Python test suite: **35 passed**.
+- Python test suite: **36 passed**.
 - Synthetic offline render: passed.
 - Artifact upload: passed.
 
@@ -40,10 +40,13 @@ Frames at 5, 15 and 25 seconds were inspected from the run #55 artifact. Subtitl
 - Publish guard
 - Talking-avatar adapter input validation, subprocess/output validation and timeout path
 - Pipeline orchestration, topic recovery after simulated download and script-generation failures
+- Regression test for stable per-topic/caption reconciliation keys across media regeneration
 
 ## Not live-validated / remaining
 
-No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used. Durable state across ephemeral runners still requires design. The safety-test workflow is offline-only and does not publish.
+No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used.
+
+The publish reconciliation key is now stable for the same topic ID and caption even if the video is regenerated. This improves local retry safety but does not replace durable manifest storage across ephemeral runners. Durable state across ephemeral runners still requires design. The safety-test workflow is offline-only and does not publish.
 
 ## Main-branch boundary
 
