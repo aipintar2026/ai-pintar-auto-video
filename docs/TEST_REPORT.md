@@ -32,4 +32,4 @@
 
 ## Not live-validated
 
-No real Pixabay API key, Edge TTS network call, Cloudinary account upload, or Buffer account/channel queue was used. The staging workflow exposes live-media and Cloudinary tests as explicit inputs; Buffer posting is not included in the workflow.
+No real Pixabay API key, Edge TTS network call, Cloudinary account upload, or Buffer account/channel queue was used. The safety-test workflow is offline-only. Live media and Cloudinary checks are separate local CLI actions; Buffer posting is not included in the workflow.
