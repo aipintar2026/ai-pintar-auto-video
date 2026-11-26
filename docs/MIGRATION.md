@@ -2,10 +2,10 @@
 
 - AI PINTAR 1/main is untouched.
 - Install the ZIP and workflow only on `ai-pintar-2-staging`.
-- The workflow is manual-only, branch-gated, and has no publish input.
-- Offline render is the default; live media and Cloudinary upload require separate inputs and secrets.
+- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; it has no schedule or publishing input.
+- GitHub CI is offline-only; live-media and Cloudinary tests are separate local CLI actions requiring credentials.
 - Buffer queue code is not called by the staging workflow.
-- Topic/media rotation state is saved in GitHub Actions cache, not committed to `main`.
+- The production pipeline's topic/media state files are runner-local. They are not durable across ephemeral GitHub runners unless a separate persistence mechanism is configured; the current safety workflow does not run that production pipeline.
 
 ## Rollback
 
