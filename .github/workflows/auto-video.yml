@@ -1,6 +1,9 @@
 name: AI PINTAR 2.0 Staging Safety Test
 
 on:
+  pull_request:
+    branches:
+      - ai-pintar-2-staging
   workflow_dispatch:
 
 permissions:
