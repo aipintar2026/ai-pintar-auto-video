@@ -6,19 +6,19 @@
 
 | Workstream | Estimate | Status | Verified basis / remaining |
 |---|---:|---|---|
-| Safety workflow test | 100% for recorded run | GREEN | Run #51: 34 tests passed, synthetic render and artifact upload passed. |
-| Overall audit | 59% | YELLOW | Weighted estimate: safety 100%, audit 70%, adapter 30%, asset 0%, subtitle/cover 70%, pipeline 40%. Live providers and production migration remain. |
+| Safety workflow test | 100% for recorded run | GREEN | Run #55: compile, 35 tests, synthetic render and artifact upload passed; manual frame QC. |
+| Overall audit | 61% | YELLOW | Weighted estimate: safety 100%, audit 75%, adapter 30%, asset 0%, subtitle/cover 70%, pipeline 50%. Live providers and production migration remain. |
 | Talking-avatar adapter | 30% | YELLOW | Runner boundary and unit tests; no provider/engine integration. |
 | Presenter master asset | 0% | RED / BLOCKED | Approved master reference not installed. |
 | Subtitle/cover QC | 70% | YELLOW | ASS portrait renderer and manual frame QC verified; cover generation/semantic QC remains. |
-| End-to-end pipeline | 40% | YELLOW | Mocked orchestration and offline render verified; live providers, durable state and production flow remain. |
+| End-to-end pipeline | 50% | YELLOW | Mocked orchestration, script/download recovery and offline render verified; live providers and durable state remain. |
 
 ## Safe boundaries
 
-- PR #3 targets `ai-pintar-2-staging` and remains unmerged.
+- PR #3 targets `ai-pintar-2-staging`, remains draft and is unmerged.
 - No changes to `main`, production schedule or `ai-pintar-2-staging` are made by this repair.
-- The existing `main` production workflow has a schedule and may queue posts independently; it is intentionally untouched.
-- No posts are queued or published by this repair workflow.
+- The existing `main` production workflow has an active schedule and may queue posts independently; it is intentionally untouched.
+- No posts are queued or published by the staging repair workflow.
 
 ## Status legend
 

@@ -1,15 +1,17 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Verified run:** GitHub Actions run #51  
-**Run ID:** `45762724410`  
-**Commit:** `ce474b82c77cf5f626c81060f05bf613aa8d01e7`  
-**Date:** 26 November 2026
+**Verified run:** GitHub Actions run #55  
+**Run ID:** `45763325239`  
+**Commit:** `99e68c0b154485abeacaa6dd8188f6bf64395379`  
+**Date:** 26 November 2026  
+**Artifact ID:** `15091430474`
 
 ## Automated tests
 
-- Python test suite: **34 passed**.
+- Python compilation: passed.
+- Python test suite: **35 passed**.
 - Synthetic offline render: passed.
-- Artifact upload: passed; artifact ID `15090606425`.
+- Artifact upload: passed.
 
 ## Offline render QC
 
@@ -27,7 +29,7 @@
 
 ## Manual frame QC
 
-Frames at 5, 15 and 25 seconds were inspected from the artifact. Subtitles were readable, limited to two lines, bottom-centered, and outside the synthetic avatar overlay. The ASS renderer uses an explicit portrait canvas and fixed safe-area style. This does not validate actual footage, a real presenter, cover/thumbnail quality or semantic subtitle-to-video alignment.
+Frames at 5, 15 and 25 seconds were inspected from the run #55 artifact. Subtitles were readable, limited to two lines, bottom-centered, and outside the synthetic avatar overlay. The ASS renderer uses an explicit portrait canvas and fixed safe-area style. This does not validate actual footage, a real presenter, cover/thumbnail quality or semantic subtitle-to-video alignment.
 
 ## Mocked integration coverage
 
@@ -37,8 +39,12 @@ Frames at 5, 15 and 25 seconds were inspected from the artifact. Subtitles were 
 - Buffer channel lookup, GraphQL payload, metadata, scheduling mode, manifest success and duplicate/unknown reconciliation
 - Publish guard
 - Talking-avatar adapter input validation, subprocess/output validation and timeout path
-- Pipeline orchestration, topic recovery after a simulated download failure
+- Pipeline orchestration, topic recovery after simulated download and script-generation failures
 
 ## Not live-validated / remaining
 
 No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used. Durable state across ephemeral runners still requires design. The safety-test workflow is offline-only and does not publish.
+
+## Main-branch boundary
+
+The existing `main` production schedule is active and untouched by this staging repair. The latest scheduled run #22 completed successfully; this repair did not trigger or modify it.
