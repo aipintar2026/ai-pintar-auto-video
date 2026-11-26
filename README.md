@@ -64,8 +64,8 @@ See `docs/INSTALL_GITHUB.md` for package installation guidance. Confirm that gui
 
 ## Safety boundaries
 
-- No cron/schedule is included or changed.
-- No workflow input for social publishing exists.
-- No Buffer token or publishing secrets are injected into the GitHub staging workflow.
-- The workflow runs offline by default; live Pixabay/TTS and Cloudinary upload are opt-in.
+- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; no cron schedule is present.
+- The GitHub safety workflow runs offline unit tests and a synthetic render only.
+- No Buffer token or social-publishing secrets are injected into that workflow.
+- Live Pixabay/TTS and Cloudinary checks are separate local CLI actions, not workflow inputs.
 - Do not merge staging into `main` or change AI PINTAR 1 before explicit approval.
