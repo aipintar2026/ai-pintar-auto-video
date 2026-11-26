@@ -63,3 +63,15 @@ def test_pipeline_failure_releases_topic_for_recovery(tmp_path,monkeypatch):
     assert "topic-a" not in reopened.state["used_ids"]
     assert reopened.state["failures"][-1]["reason"]=="simulated download failure"
     assert reopened.remaining()==1
+
+def test_pipeline_story_failure_releases_topic(tmp_path,monkeypatch):
+    memory,state_path=_memory(tmp_path)
+    monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
+    monkeypatch.setattr(pipeline,"ROOT",tmp_path)
+    monkeypatch.setenv("PIXABAY_API_KEY","test-key")
+    monkeypatch.setattr(pipeline,"make_story",lambda topic:(_ for _ in ()).throw(RuntimeError("simulated script failure")))
+    with pytest.raises(RuntimeError,match="simulated script failure"):
+        pipeline.run_pipeline(outdir=tmp_path/"story-failed",publish=False)
+    reopened=TopicMemory(tmp_path/"topics.json",state_path)
+    assert "topic-a" not in reopened.state["used_ids"]
+    assert reopened.state["failures"][-1]["reason"]=="simulated script failure"
