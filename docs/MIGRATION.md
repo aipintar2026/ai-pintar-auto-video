@@ -5,6 +5,7 @@
 - CI uses read-only repository permissions, pinned GitHub Actions SHAs, mocked integrations and synthetic media.
 - CI does not use Pixabay, Edge TTS, Cloudinary or Buffer credentials; no posts are queued or published by this workflow.
 - The existing `main` production schedule remains active and may queue posts independently. This PR does not stop it.
+- Publish reconciliation keys now remain stable per topic ID and caption across media regeneration; regression-tested.
 - Topic/media state and publish manifests are runner-local; durable persistence across ephemeral runners needs a separate design before production migration.
 
 ## Review gates
