@@ -49,8 +49,10 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
     for i, clip in enumerate(clips):
         filters.append(f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps={fps},trim=duration={segment:.6f},setpts=PTS-STARTPTS[v{i}]")
     filters.append("".join(f"[v{i}]" for i in range(len(clips)))+f"concat=n={len(clips)}:v=1:a=0[bg]")
-    sub_path=_escape_filter_path(subtitles)
-    filters.append(f"[bg]subtitles='{sub_path}':force_style='FontSize=34,Outline=2,Shadow=1,MarginV=300,Alignment=6'[sub]")
+    ass_path=Path(subtitles).with_suffix(".ass")
+    render_subtitles=ass_path if ass_path.exists() else Path(subtitles)
+    sub_path=_escape_filter_path(render_subtitles)
+    filters.append(f"[bg]subtitles='{sub_path}'[sub]")
     if avatar_index is not None:
         if avatar_kind == "video":
             filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar]")
@@ -94,19 +96,37 @@ def _subtitle_chunks(script, max_chars=34, max_lines=2, max_words=14):
 
 
 def caption_and_srt(topic, script, duration, output):
-    caption=f"{topic['title']}\n\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
+    caption=f"{topic['title']}\\n\\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
     Path(output/'caption.txt').write_text(caption,encoding='utf-8')
     chunks=_subtitle_chunks(script)
     weights=[max(1,len(chunk.split())) for chunk in chunks]
     total=sum(weights)
     elapsed=0.0
     cues=[]
+    ass_events=[]
     for index,(chunk,weight) in enumerate(zip(chunks,weights),1):
         start=elapsed
         elapsed=duration if index==len(chunks) else elapsed+(duration*weight/total)
-        wrapped="\n".join(textwrap.wrap(chunk,width=34,break_long_words=False,break_on_hyphens=False))
-        cues.append(f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\n{wrapped}")
-    (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding='utf-8')
+        wrapped=textwrap.wrap(chunk,width=34,break_long_words=False,break_on_hyphens=False)
+        srt_text="\\n".join(wrapped)
+        cues.append(f"{index}\\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\\n{srt_text}")
+        ass_text=r"\\N".join(wrapped).replace("{",r"\\{").replace("}",r"\\}")
+        ass_events.append(f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(elapsed)},Default,,0,0,0,,{ass_text}")
+    (Path(output)/'subtitles.srt').write_text("\\n\\n".join(cues)+"\\n",encoding='utf-8')
+    ass_header="""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Default,DejaVu Sans,34,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,2,1,2,80,80,300,1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+"""
+    (Path(output)/'subtitles.ass').write_text(ass_header+"\\n".join(ass_events)+"\\n",encoding='utf-8')
     return caption
 
 def _srt_timestamp(seconds):
@@ -116,6 +136,15 @@ def _srt_timestamp(seconds):
     secs=(total_ms//1000)%60
     millis=total_ms%1000
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+def _ass_timestamp(seconds):
+    total_cs=max(0,int(round(float(seconds)*100)))
+    hours=total_cs//360000
+    minutes=(total_cs//6000)%60
+    secs=(total_cs//100)%60
+    centiseconds=total_cs%100
+    return f"{hours}:{minutes:02d}:{secs:02d}.{centiseconds:02d}"
 
 
 def _load_media_ids(path):
