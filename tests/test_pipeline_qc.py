@@ -41,3 +41,11 @@ def test_subtitles_are_limited_to_two_readable_lines(tmp_path):
         assert 1<=len(lines)<=2
         assert all(len(line)<=34 for line in lines)
         assert len(" ".join(lines).split())<=14
+
+def test_ass_subtitles_have_portrait_canvas_and_style(tmp_path):
+    caption_and_srt({"title":"Test"},"Two short subtitle phrases. Another phrase.",10.0,tmp_path)
+    ass=(tmp_path/"subtitles.ass").read_text(encoding="utf-8")
+    assert "PlayResX: 1080" in ass
+    assert "PlayResY: 1920" in ass
+    assert "Style: Default,DejaVu Sans,34" in ass
+    assert "Dialogue: 0," in ass
