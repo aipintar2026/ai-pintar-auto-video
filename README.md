@@ -1,6 +1,6 @@
 # AI PINTAR 2.0 — staging package
 
-**Staging only. This package does not modify or replace AI PINTAR 1. The safety-test workflow runs on pull requests targeting `ai-pintar-2-staging` and manual dispatch. It has no schedule, publishing secrets, or social-queue steps.**
+**Staging only. This package does not modify or replace AI PINTAR 1. PR #3 targets `ai-pintar-2-staging`. The safety-test workflow runs on pull requests to that branch and manual dispatch. It has no publishing steps or secrets.**
 
 ## What it includes
 
@@ -8,10 +8,10 @@
 - Structured Indonesian script generator (hook, problem, solution, insight, CTA)
 - Pixabay search/download with 24-hour result cache and used-ID tracking
 - Edge TTS (`id-ID-ArdiNeural` by default)
-- FFmpeg 1080×1920 render, burned subtitles, optional approved presenter image/video overlay, optional licensed music at low gain
-- QC for video/audio streams, resolution, duration, captions, subtitle file and topic ID
-- Signed Cloudinary upload (optional staging test)
-- Buffer GraphQL queue helper with channel checks, channel-aware notification/automatic mode, and manifest reconciliation; **not invoked by the GitHub staging workflow**
+- FFmpeg 1080×1920 render, burned subtitles (SRT + ASS), optional approved presenter image/video overlay, optional licensed music at low gain
+- QC for video/audio streams, resolution, duration, caption, subtitle/ASS canvas and topic ID
+- Signed Cloudinary upload helper (optional local staging test)
+- Buffer GraphQL queue helper with channel checks and manifest reconciliation; **not invoked by the GitHub safety workflow**
 - Offline synthetic-media test and unit tests
 
 ## Quick offline test (local)
@@ -56,20 +56,21 @@ This uploads the QC-approved video to the staging folder and does not queue it t
 
 ## Buffer queue
 
-The helper is included and unit-tested, but **live account/channel testing has not been performed**. Queueing is not exposed by the staging GitHub workflow. For a deliberate local run only, after reviewing the video, confirming the public Cloudinary URL and checking the Buffer queue, the operator must explicitly pass `--publish`, channel IDs, and set `PUBLISH_ENABLED=true` and `PUBLISH_DRY_RUN=false`. The helper checks the channel, chooses notification scheduling for Instagram personal profiles/Facebook groups, and writes a per-channel manifest. `pending`/`unknown` outcomes are not retried automatically; reconcile them in Buffer first.
+The helper is included and unit-tested, but **live account/channel testing has not been performed**. Queueing is not exposed by the staging GitHub workflow. For a deliberate local run only, after reviewing the video, confirming the public Cloudinary URL and checking the Buffer queue, the operator must explicitly pass `--publish`, channel IDs, and set `PUBLISH_ENABLED=true` and `PUBLISH_DRY_RUN=false`. The helper checks the channel, writes a per-channel manifest and does not blindly retry `pending`/`unknown` outcomes; reconcile them in Buffer first.
 
-## GitHub staging installation
+## GitHub staging workflow
 
-See `docs/INSTALL_GITHUB.md` for package installation guidance. Confirm that guide's workflow matches the current safety-test workflow before following any installer steps. All staging work must stay on `ai-pintar-2-staging`, not `main`.
+The current workflow is already in `.github/workflows/auto-video.yml`. See `docs/INSTALL_GITHUB.md`. **Do not upload a ZIP or create a second workflow.** Run the safe test on the repair branch or review PR #3. No secrets or publishing inputs are used.
 
 ## Safety boundaries
 
-- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; no cron schedule is present.
-- The GitHub safety workflow runs offline unit tests and a synthetic render only.
+- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; no cron schedule is present in this repair branch.
+- GitHub CI runs compilation, unit tests and a synthetic render only.
 - No Buffer token or social-publishing secrets are injected into that workflow.
 - Live Pixabay/TTS and Cloudinary checks are separate local CLI actions, not workflow inputs.
+- The existing `main` production schedule remains untouched and may queue posts independently. This repair branch does not stop or modify it.
 - Do not merge staging into `main` or change AI PINTAR 1 before explicit approval.
 
 ## Official presenter master reference
 
-AI PINTAR Host must use the approved master image supplied by the project owner; do not substitute generated or search-result faces. Install the master reference image as `assets/aipintar_host_master.jpg` (preferred), or `assets/presenter_master.jpg`, or `assets/presenter.png`. The production CLI auto-selects the first existing candidate unless `--avatar` is provided explicitly. The current FFmpeg avatar feature is a static/video overlay only: it does not generate facial animation or lip-sync. A master reference image is not committed by this code change; the original owner-provided image must be securely added to the repository asset folder before live render validation.
+AI PINTAR Host must use the approved master image supplied by the project owner; do not substitute generated or search-result faces. Install the master reference image as `assets/aipintar_host_master.jpg` (preferred), or `assets/presenter_master.jpg`, or `assets/presenter.png`. The production CLI auto-selects the first existing candidate unless `--avatar` is provided explicitly. The current FFmpeg avatar feature is a static/video overlay only: it does not generate facial animation or lip-sync. The master reference image is not committed by this code change; the owner-provided image must be securely added before live presenter validation.

@@ -1,12 +1,15 @@
 # AI PINTAR 2.0 Staging Test Report
 
+**Verified run:** GitHub Actions run #51  
+**Run ID:** `45762724410`  
+**Commit:** `ce474b82c77cf5f626c81060f05bf613aa8d01e7`  
 **Date:** 26 November 2026
 
 ## Automated tests
 
-- Python test suite: **22 passed**.
-- Python compilation: passed.
-- Offline synthetic render: passed.
+- Python test suite: **34 passed**.
+- Synthetic offline render: passed.
+- Artifact upload: passed; artifact ID `15090606425`.
 
 ## Offline render QC
 
@@ -14,22 +17,28 @@
 - Resolution: 1080 × 1920 portrait
 - Video: H.264
 - Audio: AAC
-- Caption file: present
-- SRT: multiple sentence-timed cues, present and burned into video
-- Presenter overlay: synthetic image overlay exercised
-- Music mixing: synthetic audio bed exercised
+- Caption: present
+- SRT and ASS subtitle files: present; ASS canvas explicitly 1080 × 1920
+- QC report: caption, subtitle, ASS subtitle, audio/video and topic ID passed
+- Presenter overlay: synthetic blue block only (placement path exercised, not a real presenter)
+- Music mix: synthetic audio bed exercised
 - Publish: disabled
 - External provider calls: none
-- Test render frame rate: 10 fps to keep the offline test quick; the production renderer defaults to 30 fps.
+
+## Manual frame QC
+
+Frames at 5, 15 and 25 seconds were inspected from the artifact. Subtitles were readable, limited to two lines, bottom-centered, and outside the synthetic avatar overlay. The ASS renderer uses an explicit portrait canvas and fixed safe-area style. This does not validate actual footage, a real presenter, cover/thumbnail quality or semantic subtitle-to-video alignment.
 
 ## Mocked integration coverage
 
-- Pixabay response and download/fallback selection
-- Edge TTS Python API call path
-- Cloudinary signed upload request construction and response validation
-- Buffer channel lookup, GraphQL create-post payload, platform metadata, scheduling mode, manifest success and duplicate/unknown reconciliation
-- Publish guard dry-run defaults
+- Pixabay response/download/fallback selection
+- Edge TTS API call path
+- Cloudinary signed upload request and response validation
+- Buffer channel lookup, GraphQL payload, metadata, scheduling mode, manifest success and duplicate/unknown reconciliation
+- Publish guard
+- Talking-avatar adapter input validation, subprocess/output validation and timeout path
+- Pipeline orchestration, topic recovery after a simulated download failure
 
-## Not live-validated
+## Not live-validated / remaining
 
-No real Pixabay API key, Edge TTS network call, Cloudinary account upload, or Buffer account/channel queue was used. The safety-test workflow is offline-only. Live media and Cloudinary checks are separate local CLI actions; Buffer posting is not included in the workflow.
+No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used. Durable state across ephemeral runners still requires design. The safety-test workflow is offline-only and does not publish.

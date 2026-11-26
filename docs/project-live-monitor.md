@@ -1,24 +1,24 @@
 # AI PINTAR 2.0 — Project Live Monitor
 
-> Snapshot / dashboard schema. This file is not a live telemetry page; hourly monitoring reports current verified state in ChatGPT. Percentages are milestone estimates, not measured runtime telemetry.
+> Static snapshot only. This file is not live telemetry; monitoring reports current verified state in ChatGPT. Percentages are estimates, not measured runtime telemetry.
 
-## Workstreams
+## Snapshot — 26 November 2026
 
 | Workstream | Estimate | Status | Verified basis / remaining |
 |---|---:|---|---|
-| Safety workflow test | 100% for recorded run | GREEN | Run #24 / offline-safety-test successful; this does not certify full project safety. |
-| Overall audit | 45% | YELLOW | Initial workflow safety test passed; integration, recovery, security, duplicate handling, and end-to-end QC remain. |
-| Talking-avatar adapter | 20% | YELLOW | Runner boundary and documentation committed; provider/engine not selected or tested. |
-| Presenter master asset | 0% | RED / BLOCKED | Master reference asset not installed in repository asset path. |
-| Subtitle & cover QC | 40% | YELLOW | Standards documented; renderer implementation and output QC not yet verified. |
-| End-to-end production pipeline | 20% | YELLOW | Existing integration groundwork; complete end-to-end execution and QC pending. |
+| Safety workflow test | 100% for recorded run | GREEN | Run #51: 34 tests passed, synthetic render and artifact upload passed. |
+| Overall audit | 59% | YELLOW | Weighted estimate: safety 100%, audit 70%, adapter 30%, asset 0%, subtitle/cover 70%, pipeline 40%. Live providers and production migration remain. |
+| Talking-avatar adapter | 30% | YELLOW | Runner boundary and unit tests; no provider/engine integration. |
+| Presenter master asset | 0% | RED / BLOCKED | Approved master reference not installed. |
+| Subtitle/cover QC | 70% | YELLOW | ASS portrait renderer and manual frame QC verified; cover generation/semantic QC remains. |
+| End-to-end pipeline | 40% | YELLOW | Mocked orchestration and offline render verified; live providers, durable state and production flow remain. |
 
 ## Safe boundaries
 
-- Keep `main`, `ai-pintar-2-staging`, and production untouched without explicit approval.
-- PR #3 remains draft; do not merge.
-- Do not publish videos or enable posting integrations.
-- Treat untested components as pending; never infer successful tests.
+- PR #3 targets `ai-pintar-2-staging` and remains unmerged.
+- No changes to `main`, production schedule or `ai-pintar-2-staging` are made by this repair.
+- The existing `main` production workflow has a schedule and may queue posts independently; it is intentionally untouched.
+- No posts are queued or published by this repair workflow.
 
 ## Status legend
 

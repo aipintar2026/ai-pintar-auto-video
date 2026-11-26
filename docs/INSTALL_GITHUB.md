@@ -1,40 +1,28 @@
-# Install AI PINTAR 2.0 staging on GitHub from Android
+# AI PINTAR 2.0 — safe staging workflow
 
-The workflow is manual-only and runs **only** on `ai-pintar-2-staging`. It does not alter the `main` branch, AI PINTAR 1 workflow, or its schedule.
+The staging safety workflow is already present in `.github/workflows/auto-video.yml`. **Do not upload a package ZIP or create another workflow file.**
 
-## A. Upload the package ZIP
+## Run the test
 
-1. Open the repository `ai-pintar-auto-video` and switch to branch `ai-pintar-2-staging`.
-2. Use **+ → Upload files**.
-3. Upload the file named `aipintar2_staging_package.zip` to the repository root.
-4. Commit the upload to `ai-pintar-2-staging`.
+1. Open repository `aipintar2026/ai-pintar-auto-video`.
+2. Use branch `ai-pintar-2-safety-fixes` or review PR #3, which targets `ai-pintar-2-staging`.
+3. On a pull request targeting staging, the workflow runs automatically. For a manual test, open **Actions → AI PINTAR 2.0 Staging Safety Test → Run workflow** and select the repair branch.
+4. There are no workflow inputs. Do not select `main` or run the production workflow.
+5. Inspect the job logs and `AI-PINTAR-STAGING-OFFLINE` artifact. The artifact contains the synthetic video, caption, SRT, ASS, manifest and script.
+6. This workflow uses no provider credentials, makes no external calls, and cannot enqueue or publish posts.
 
-## B. Create the workflow file
+## What the workflow verifies
 
-1. Still on `ai-pintar-2-staging`, use **+ → Create new file**.
-2. File name: `.github/workflows/ai-pintar-2-staging.yml`.
-3. Copy the complete YAML from `docs/INSTALL_WORKFLOW.yml` in the package into the editor.
-4. Commit to `ai-pintar-2-staging`.
+- Python compilation and unit tests
+- Offline mocked integration paths
+- Topic recovery and publish-manifest failure handling
+- Synthetic 30-second 1080×1920 H.264/AAC render
+- Caption, SRT and ASS subtitle QC, plus artifact upload
 
-## C. Run the safe offline check
+## Separate live validation
 
-1. Open **Actions**.
-2. Select **AI PINTAR 2.0 STAGING**.
-3. Press **Run workflow**, branch `ai-pintar-2-staging`.
-4. Leave both inputs `live_media=false` and `cloudinary_test=false`.
-5. Run it. The job extracts the ZIP, installs dependencies, runs tests, creates a synthetic 30-second render, checks QC and stores an artifact.
-6. Inspect the artifact video and logs before doing anything else.
+Live Pixabay/Edge TTS, Cloudinary and Buffer checks are not workflow inputs and are not part of this safe CI run. They require separate credentials, explicit operator action and review. The current presenter master image and talking-avatar engine are not installed/validated.
 
-## D. Optional live media test
+## Rollback
 
-Only after the offline run succeeds, add `PIXABAY_API_KEY` under repository **Settings → Secrets and variables → Actions → New repository secret**. Do not paste it in a file or chat.
-
-Run the workflow with `live_media=true`, `cloudinary_test=false`. This fetches real footage and uses Edge TTS, but **does not publish**.
-
-## E. Optional Cloudinary upload test
-
-After a live-media run succeeds, add Cloudinary secrets (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). Run with `live_media=true` and `cloudinary_test=true`. It uploads to the staging folder. Buffer is not called.
-
-## F. Rollback
-
-Delete/revert the staging branch or its package/workflow files. Do not change `main`; no production workflow or schedule has been edited. Do not merge this branch without approval.
+Close/revert PR #3 or revert changes on the staging branch. Do not merge to `main`. The existing `main` schedule is active and untouched by this repair.

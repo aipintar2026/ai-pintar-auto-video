@@ -1,12 +1,22 @@
 # Safe staging migration
 
-- AI PINTAR 1/main is untouched.
-- Install the ZIP and workflow only on `ai-pintar-2-staging`.
-- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; it has no schedule or publishing input.
-- GitHub CI is offline-only; live-media and Cloudinary tests are separate local CLI actions requiring credentials.
-- Buffer queue code is not called by the staging workflow.
-- The production pipeline's topic/media state files are runner-local. They are not durable across ephemeral GitHub runners unless a separate persistence mechanism is configured; the current safety workflow does not run that production pipeline.
+- PR #3 targets `ai-pintar-2-staging`; `main` and AI PINTAR 1 are untouched.
+- The repair workflow is manual/PR-test only, no schedule and no publishing input.
+- CI uses read-only repository permissions, pinned GitHub Actions SHAs, mocked integrations and synthetic media.
+- CI does not use Pixabay, Edge TTS, Cloudinary or Buffer credentials; no posts are queued or published by this workflow.
+- The existing `main` production schedule remains active and may queue posts independently. This PR does not stop it.
+- Topic/media state and publish manifests are runner-local; durable persistence across ephemeral runners needs a separate design before production migration.
+
+## Review gates
+
+1. Review PR #3 and the run/artifact results.
+2. Confirm the synthetic video and subtitle QC.
+3. Install the approved presenter master asset and select/validate an actual talking-avatar engine before any presenter production test.
+4. Validate live Pixabay/Edge TTS and Cloudinary separately with controlled credentials.
+5. Validate Buffer live channel operations only after reconciliation safeguards and durable state are reviewed.
+6. Verify cover/thumbnail generation and visual QC, which are not implemented in this safety-test package.
+7. Only then prepare a migration plan with explicit approval, backup and rollback.
 
 ## Rollback
 
-Revert/delete staging branch changes or the branch itself. Do not merge to `main`. No production schedule or workflow is modified.
+Close/revert the staging PR or branch. Do not merge to `main`; no production workflow or schedule has been modified.

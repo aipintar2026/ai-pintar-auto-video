@@ -1,6 +1,7 @@
 # AI PINTAR 2.0 — Subtitle & Cover Visual Standard
 
 ## Subtitle style
+
 - Keep subtitles concise and conversational; rewrite narration into readable phrase chunks rather than transcribing every word.
 - Limit to 1–2 lines, with line lengths short enough for a phone screen.
 - Keep text in a lower-middle safe zone but above platform UI; do not cover the main subject, face, or key footage.
@@ -11,7 +12,12 @@
 - Use phrase-level timing, punctuation and natural pauses; avoid stiff robotic line breaks.
 - Do not cover more than approximately 15% of the vertical frame with subtitles.
 
+## Implemented subtitle renderer
+
+The current staging render creates both SRT and ASS. ASS uses an explicit 1080×1920 canvas, DejaVu Sans 34 px, 2 px outline, 1 px shadow, bottom-center alignment and 300 px bottom margin. The SRT/ASS phrase chunks are limited to two lines. CI checks the ASS canvas and performs a synthetic render; manual frame inspection is required for semantic alignment and safe zones.
+
 ## Cover / thumbnail
+
 - Create a distinct opening cover/thumbnail for every video, not a generic still.
 - Use a strong curiosity-based 3–7-word headline in large readable type, plus a visually relevant focal image.
 - Headline must promise a clear benefit or curiosity without misleading clickbait.
@@ -21,8 +27,11 @@
 - For platforms that use a cover frame, set/choose the cover deliberately; where the API does not support cover upload, create the cover as the opening frame and document the platform limitation.
 
 ## QC checks
+
 - Verify subtitles do not obstruct faces, key objects, or footage.
 - Check cover readability at small phone size.
 - Check title and subtitles for spelling, natural Indonesian, and concise phrasing.
 - Check timing, line breaks, safe zones, and consistency.
 - Fail QC or flag for review when these checks cannot be verified automatically.
+
+Cover/thumbnail generation and semantic subtitle-to-footage QC are not implemented in this staging safety package.
