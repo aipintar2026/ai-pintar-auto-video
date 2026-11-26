@@ -34,7 +34,7 @@ def test_story_length_for_all_topics():
 def test_subtitles_are_limited_to_two_readable_lines(tmp_path):
     script=("AI membantu pekerjaan dengan cara yang praktis dan mudah dipahami. " * 12).strip()
     caption_and_srt({"title":"Test"},script,36.0,tmp_path)
-    blocks=(tmp_path/"subtitles.srt").read_text(encoding="utf-8").strip().split("\\n\\n")
+    blocks=(tmp_path/"subtitles.srt").read_text(encoding="utf-8").strip().split("\n\n")
     assert len(blocks)>1
     for block in blocks:
         lines=block.splitlines()[2:]
