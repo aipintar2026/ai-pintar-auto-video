@@ -27,10 +27,10 @@ def probe_video(path: str):
 
 def _validate_srt(path: Path):
     text = path.read_text(encoding="utf-8").strip()
-    blocks = [b for b in re.split(r"\\n\\s*\\n", text) if b.strip()]
+    blocks = [b for b in re.split(r"\n\s*\n", text) if b.strip()]
     if not blocks:
         raise RuntimeError("QC: subtitle SRT tidak memiliki cue.")
-    timestamp = re.compile(r"^(\\d{2}:\\d{2}:\\d{2},\\d{3}) --> (\\d{2}:\\d{2}:\\d{2},\\d{3})$")
+    timestamp = re.compile(r"^(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})$")
     def seconds(value):
         hh, mm, tail = value.split(":")
         ss, ms = tail.split(",")
@@ -45,7 +45,7 @@ def _validate_srt(path: Path):
             raise RuntimeError("QC: timestamp SRT tidak valid.")
         start, end = map(seconds, match.groups())
         if start < previous_end or end <= start:
-            raise RuntimeError("QC: timestamp SRT tumpang tindih atau durasi cue tidak valid.")
+            raise RuntimeError("QC: timestamp SRT tumpang overlap atau durasi cue tidak valid.")
         if not any(line.strip() for line in lines[2:]):
             raise RuntimeError("QC: cue SRT tanpa teks.")
         previous_end = end
