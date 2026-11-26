@@ -2,7 +2,7 @@ import json, subprocess
 from pathlib import Path
 import pytest
 from engine.production_pipeline import caption_and_srt, _escape_filter_path
-from engine.qc import prepublish_checks, probe_video
+from engine.qc import prepublish_checks, probe_video, _validate_srt
 from engine.production import make_story
 
 
@@ -77,3 +77,15 @@ def test_prepublish_qc_accepts_valid_srt_and_ass(tmp_path, monkeypatch):
     monkeypatch.setattr("engine.qc.probe_video",lambda p:{"duration":35,"resolution":"1080x1920"})
     report=prepublish_checks(video,caption,"topic",srt)
     assert report["subtitle_cues"]==1
+
+@pytest.mark.parametrize("srt,reason", [
+    ("2\\n00:00:00,000 --> 00:00:01,000\\nText\\n", "nomor"),
+    ("1\\n00:00:00,000 --> 00:00:40,000\\nText\\n", "setelah durasi"),
+    ("1\\n00:00:00,000 --> 00:00:01,000\\n" + "x"*35 + "\\n", "keterbacaan"),
+    ("1\\n00:00:00,000 --> 00:00:01,000\\nA\\nB\\nC\\n", "keterbacaan"),
+])
+def test_srt_qc_rejects_sequence_duration_and_readability(tmp_path, srt, reason):
+    path=tmp_path/"bad.srt"
+    path.write_text(srt,encoding="utf-8")
+    with pytest.raises(RuntimeError,match=reason):
+        _validate_srt(path,video_duration=35)
