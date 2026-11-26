@@ -31,7 +31,13 @@ def prepublish_checks(video, caption, topic_id, subtitles):
         p = Path(path)
         if not p.exists() or not p.read_text(encoding="utf-8").strip():
             raise RuntimeError(f"QC: {label} hilang atau kosong.")
+    ass_path=Path(subtitles).with_suffix(".ass")
+    if not ass_path.exists() or not ass_path.read_text(encoding="utf-8").strip():
+        raise RuntimeError("QC: ASS subtitle file hilang atau kosong.")
+    ass_text=ass_path.read_text(encoding="utf-8")
+    if "PlayResX: 1080" not in ass_text or "PlayResY: 1920" not in ass_text:
+        raise RuntimeError("QC: ASS subtitle canvas harus 1080x1920.")
     if not topic_id:
         raise RuntimeError("QC: topic_id tidak tercatat.")
-    report.update({"caption": True, "subtitle": True, "topic_id": topic_id})
+    report.update({"caption": True, "subtitle": True, "ass_subtitle": True, "topic_id": topic_id})
     return report
