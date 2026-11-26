@@ -207,11 +207,14 @@ def _post_metadata(channel: dict, caption: str):
         return {"facebook": {"type": "post" if channel_type == "group" else "reel"}}
     if service in ("youtube", "yt"):
         return {"youtube": {"title": title, "categoryId": "27", "type": "short", "privacy": "public", "isAiGenerated": True}}
+    if service == "tiktok":
+        # Explicit AI disclosure for AI-generated content.
+        return {"tiktok": {"isAiGenerated": True}}
     if service in ("google", "googlebusiness", "google_business"):
         return {"google": {"type": "post"}}
     if service == "pinterest":
         raise RuntimeError("Buffer Pinterest memerlukan boardServiceId; helper staging belum mengonfigurasi board dan berhenti aman.")
-    # TikTok, LinkedIn, X/Twitter, Threads, Bluesky, Mastodon use the generic video asset shape.
+    # LinkedIn, X/Twitter, Threads, Bluesky, Mastodon use the generic video asset shape.
     return {}
 
 
