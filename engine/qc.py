@@ -21,7 +21,7 @@ def probe_video(path: str):
     if (int(vids[0].get("width", 0)), int(vids[0].get("height", 0))) != (1080, 1920):
         raise RuntimeError("QC: resolusi harus 1080x1920.")
     if not 30 <= duration <= 46:
-        raise RuntimeError(f"QC: durasi di luar target 30-45 detik (terbaca {duration:.1f}).")
+        raise RuntimeError(f"QC: durasi di luar target 30-46 detik (terbaca {duration:.1f}).")
     return {"duration": duration, "resolution": "1080x1920", "audio": True, "bytes": p.stat().st_size, "video_codec": vids[0].get("codec_name"), "audio_codec": auds[0].get("codec_name")}
 
 
