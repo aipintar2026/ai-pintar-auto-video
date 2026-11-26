@@ -50,7 +50,7 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
         filters.append(f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps={fps},trim=duration={segment:.6f},setpts=PTS-STARTPTS[v{i}]")
     filters.append("".join(f"[v{i}]" for i in range(len(clips)))+f"concat=n={len(clips)}:v=1:a=0[bg]")
     sub_path=_escape_filter_path(subtitles)
-    filters.append(f"[bg]subtitles='{sub_path}':force_style='FontSize=42,Outline=2,Shadow=1,MarginV=180,Alignment=2'[sub]")
+    filters.append(f"[bg]subtitles='{sub_path}':force_style='FontSize=34,Outline=2,Shadow=1,MarginV=300,Alignment=6'[sub]")
     if avatar_index is not None:
         if avatar_kind == "video":
             filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar]")
@@ -73,24 +73,41 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
     return out
 
 
-def caption_and_srt(topic, script, duration, output):
-    caption=f"{topic['title']}\n\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
-    Path(output/'caption.txt').write_text(caption,encoding='utf-8')
-    sentences=[s.strip() for s in re.split(r"(?<=[.!?])\s+", script.strip()) if s.strip()]
+def _subtitle_chunks(script, max_chars=34, max_lines=2, max_words=14):
+    sentences=[s.strip() for s in re.split(r"(?<=[.!?])\\s+", script.strip()) if s.strip()]
     if not sentences:
         sentences=[script.strip()]
-    weights=[max(1,len(s.split())) for s in sentences]
+    chunks=[]
+    for sentence in sentences:
+        current=[]
+        for word in sentence.split():
+            candidate=current+[word]
+            lines=textwrap.wrap(" ".join(candidate),width=max_chars,break_long_words=False,break_on_hyphens=False)
+            if current and (len(lines)>max_lines or len(candidate)>max_words):
+                chunks.append(" ".join(current))
+                current=[word]
+            else:
+                current=candidate
+        if current:
+            chunks.append(" ".join(current))
+    return chunks
+
+
+def caption_and_srt(topic, script, duration, output):
+    caption=f"{topic['title']}\\n\\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
+    Path(output/'caption.txt').write_text(caption,encoding='utf-8')
+    chunks=_subtitle_chunks(script)
+    weights=[max(1,len(chunk.split())) for chunk in chunks]
     total=sum(weights)
     elapsed=0.0
     cues=[]
-    for index,(sentence,weight) in enumerate(zip(sentences,weights),1):
+    for index,(chunk,weight) in enumerate(zip(chunks,weights),1):
         start=elapsed
-        elapsed=duration if index==len(sentences) else elapsed+(duration*weight/total)
-        wrapped="\n".join(textwrap.wrap(sentence,width=42,break_long_words=False,break_on_hyphens=False))
-        cues.append(f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\n{wrapped}")
-    (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding='utf-8')
+        elapsed=duration if index==len(chunks) else elapsed+(duration*weight/total)
+        wrapped="\\n".join(textwrap.wrap(chunk,width=34,break_long_words=False,break_on_hyphens=False))
+        cues.append(f"{index}\\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\\n{wrapped}")
+    (Path(output)/'subtitles.srt').write_text("\\n\\n".join(cues)+"\\n",encoding='utf-8')
     return caption
-
 
 def _srt_timestamp(seconds):
     total_ms=int(round(float(seconds)*1000))
