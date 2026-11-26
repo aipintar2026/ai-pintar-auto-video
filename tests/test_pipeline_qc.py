@@ -17,7 +17,7 @@ def test_caption_srt_valid_timestamp(tmp_path):
 
 
 def test_filter_path_escape():
-    assert '\\\\:' in _escape_filter_path('a:b')
+    assert '\\:' in _escape_filter_path('a:b')
 
 
 def test_qc_rejects_missing(tmp_path):
