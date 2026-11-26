@@ -49,3 +49,31 @@ def test_ass_subtitles_have_portrait_canvas_and_style(tmp_path):
     assert "PlayResY: 1920" in ass
     assert "Style: Default,DejaVu Sans,34" in ass
     assert "Dialogue: 0," in ass
+
+
+def test_prepublish_qc_rejects_malformed_srt(tmp_path, monkeypatch):
+    video=tmp_path/"fake.mp4"
+    video.write_bytes(b"x"*100_000)
+    caption=tmp_path/"caption.txt"
+    caption.write_text("Caption",encoding="utf-8")
+    srt=tmp_path/"subtitles.srt"
+    srt.write_text("1\\ninvalid timestamp\\nText\\n",encoding="utf-8")
+    ass=tmp_path/"subtitles.ass"
+    ass.write_text("[Script Info]\\nPlayResX: 1080\\nPlayResY: 1920\\n[Events]\\nDialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,Text\\n",encoding="utf-8")
+    monkeypatch.setattr("engine.qc.probe_video",lambda p:{"duration":35,"resolution":"1080x1920"})
+    with pytest.raises(RuntimeError,match="timestamp SRT"):
+        prepublish_checks(video,caption,"topic",srt)
+
+
+def test_prepublish_qc_accepts_valid_srt_and_ass(tmp_path, monkeypatch):
+    video=tmp_path/"fake.mp4"
+    video.write_bytes(b"x"*100_000)
+    caption=tmp_path/"caption.txt"
+    caption.write_text("Caption",encoding="utf-8")
+    srt=tmp_path/"subtitles.srt"
+    srt.write_text("1\\n00:00:00,000 --> 00:00:01,500\\nShort cue\\n",encoding="utf-8")
+    ass=tmp_path/"subtitles.ass"
+    ass.write_text("[Script Info]\\nPlayResX: 1080\\nPlayResY: 1920\\n[Events]\\nDialogue: 0,0:00:00.00,0:00:01.50,Default,,0,0,0,,Short cue\\n",encoding="utf-8")
+    monkeypatch.setattr("engine.qc.probe_video",lambda p:{"duration":35,"resolution":"1080x1920"})
+    report=prepublish_checks(video,caption,"topic",srt)
+    assert report["subtitle_cues"]==1
