@@ -45,7 +45,7 @@ def _validate_srt(path: Path):
             raise RuntimeError("QC: timestamp SRT tidak valid.")
         start, end = map(seconds, match.groups())
         if start < previous_end or end <= start:
-            raise RuntimeError("QC: timestamp SRT tumpang overlap atau durasi cue tidak valid.")
+            raise RuntimeError("QC: timestamp SRT tumpang tindih atau durasi cue tidak valid.")
         if not any(line.strip() for line in lines[2:]):
             raise RuntimeError("QC: cue SRT tanpa teks.")
         previous_end = end
