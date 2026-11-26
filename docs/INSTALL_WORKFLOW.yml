@@ -1,0 +1,69 @@
+name: AI PINTAR 2.0 STAGING
+on:
+  workflow_dispatch:
+    inputs:
+      live_media:
+        description: 'Run real Pixabay + Edge TTS (default is offline synthetic test)'
+        required: false
+        type: boolean
+        default: false
+      cloudinary_test:
+        description: 'Upload the QC-approved video to Cloudinary staging folder (requires live_media)'
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: ai-pintar-2-staging
+  cancel-in-progress: false
+jobs:
+  staging:
+    if: github.ref == 'refs/heads/ai-pintar-2-staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inputs and package
+        run: |
+          if [ '${{ inputs.cloudinary_test }}' = 'true' ] && [ '${{ inputs.live_media }}' != 'true' ]; then echo 'cloudinary_test requires live_media=true'; exit 1; fi
+          test -f aipintar2_staging_package.zip
+      - uses: actions/cache@v4
+        with:
+          path: aipintar2_build/state
+          key: topic-state-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: topic-state-${{ github.ref_name }}-
+      - name: Extract package
+        run: |
+          unzip -q aipintar2_staging_package.zip -d .
+          test -f aipintar2_build/README.md
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r aipintar2_build/requirements.txt
+      - name: Unit tests
+        run: cd aipintar2_build && python -m pytest -q
+      - name: Offline render
+        if: inputs.live_media != true
+        run: cd aipintar2_build && python run_offline_pipeline.py
+      - name: Live media production (no publishing)
+        if: inputs.live_media == true
+        env:
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          TTS_VOICE: id-ID-ArdiNeural
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          cd aipintar2_build
+          if [ '${{ inputs.cloudinary_test }}' = 'true' ]; then
+            python run_production.py --output output_production --upload-cloudinary
+          else
+            python run_production.py --output output_production
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-pintar-2-staging-${{ github.run_id }}
+          path: aipintar2_build/output*/
+          if-no-files-found: error
+          retention-days: 7
