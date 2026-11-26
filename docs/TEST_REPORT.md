@@ -1,15 +1,16 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Latest verified run:** GitHub Actions run #62  
-**Run ID:** \`45773091004\`  
-**Commit:** \`1f720f471d1d5c8e19ea6bda8b427b0ef56504d7\`  
-**Date:** 26 November 2026  
-**Artifact ID:** \`15094942814\`
+**Latest verified run:** GitHub Actions run #68  
+**Run ID:** `45867797228`  
+**Commit:** `52698e5e16c524b62beda4151c222201ebd26a42`  
+**Date:** 27 November 2026  
+**Artifact ID:** `15140229403`  
+**Artifact SHA-256:** `4775f765274b542126ffb5192672b3ad48c42f60bbf10f6ad9f8b04d79ef0a37`
 
 ## Automated tests
 
 - Python compilation: passed.
-- Python test suite: **38 passed**.
+- Python test suite: **42 passed, 0 failed**.
 - Synthetic offline render: passed.
 - Artifact upload: passed.
 
@@ -21,7 +22,6 @@
 - Audio: AAC
 - Caption: present
 - SRT/ASS subtitle files: present; ASS canvas explicitly 1080 × 1920
-- QC: audio/video, caption, subtitle, ASS canvas and topic ID passed
 - Subtitle cues: 14
 - Presenter overlay: synthetic block only
 - Music mix: synthetic audio bed exercised
@@ -30,7 +30,7 @@
 
 ## Manual frame QC
 
-Frames at 5, 15 and 25 seconds were inspected from run #62 artifact. Subtitles were readable, limited to two lines, bottom-centered and outside the synthetic avatar overlay. The avatar was a synthetic block; this frame review does not validate a real presenter, cover/thumbnail quality or semantic subtitle-to-footage alignment.
+Sample frames at 5, 15 and 25 seconds were inspected from the run #68 artifact. Subtitles were readable in these samples and did not visibly overlap the synthetic avatar block. This is limited sample-based visual review, not semantic footage/subtitle alignment, cover QC, or validation with a real presenter.
 
 ## Mocked integration coverage
 
@@ -47,8 +47,8 @@ Frames at 5, 15 and 25 seconds were inspected from run #62 artifact. Subtitles w
 
 No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used.
 
-Stable local reconciliation keys improve retry safety but do not replace durable manifest storage across ephemeral runners. Durable state remains a migration prerequisite.
+Stable local reconciliation keys and per-run manifests improve retry safety in tests, but do not replace durable manifest storage across ephemeral runners. Durable state remains a migration prerequisite.
 
 ## Main-branch boundary
 
-The existing \`main\` production schedule is active and untouched. The staging repair workflow is offline-only and does not queue or publish posts.
+The existing `main` production schedule is active and untouched. The staging repair workflow is offline-only and does not queue or publish posts. Production workflow safety remains separately under audit.
