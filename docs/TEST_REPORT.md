@@ -30,7 +30,7 @@
 
 ## Manual frame QC
 
-Frames at 5, 15 and 25 seconds were inspected from an earlier offline artifact (run #55). Subtitles were readable, limited to two lines, bottom-centered and outside the synthetic avatar overlay. The latest run #62 revalidated the corrected SRT parsing, the full test suite and the offline render, but manual frame inspection was not repeated on its artifact.
+Frames at 5, 15 and 25 seconds were inspected from run #62 artifact. Subtitles were readable, limited to two lines, bottom-centered and outside the synthetic avatar overlay. The avatar was a synthetic block; this frame review does not validate a real presenter, cover/thumbnail quality or semantic subtitle-to-footage alignment.
 
 ## Mocked integration coverage
 
