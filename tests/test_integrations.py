@@ -122,3 +122,41 @@ def test_publish_pipeline_guard_rejects_without_explicit_flags(monkeypatch):
     monkeypatch.setenv('PUBLISH_DRY_RUN','true')
     with pytest.raises(RuntimeError,match='Publish Guard'):
         run_pipeline(outdir='never_created',publish=True,channel_ids=['c1'])
+
+
+def test_buffer_post_uncertain_failure_marks_unknown_and_is_not_retried(tmp_path, monkeypatch):
+    monkeypatch.setenv('PUBLISH_ENABLED','true')
+    monkeypatch.setenv('PUBLISH_DRY_RUN','false')
+    monkeypatch.setenv('BUFFER_ACCESS_TOKEN','token')
+    calls=[]
+    def fake_post(url,**kwargs):
+        payload=kwargs['json']; calls.append(payload)
+        if 'GetChannel' in payload['query']:
+            return SimpleNamespace(raise_for_status=lambda:None,json=lambda:{'data':{'channel':{'id':'c1','name':'Test','service':'facebook','type':'page','isDisconnected':False,'isQueuePaused':False}}})
+        raise TimeoutError('simulated uncertain response')
+    monkeypatch.setattr(integrations.requests,'post',fake_post)
+    manifest=tmp_path/'manifest.json'
+    with pytest.raises(TimeoutError):
+        integrations.buffer_queue('https://cloud.invalid/video','caption',['c1'],enabled=True,manifest_path=manifest,content_key='uncertain')
+    saved=json.loads(manifest.read_text())
+    assert saved['uncertain']['c1']['status']=='unknown'
+    count=len(calls)
+    result=integrations.buffer_queue('https://cloud.invalid/video','caption',['c1'],enabled=True,manifest_path=manifest,content_key='uncertain')
+    assert result['results'][0]['status']=='skipped_reconcile'
+    assert len(calls)==count
+
+
+def test_buffer_disconnected_channel_fails_before_manifest_or_post(tmp_path, monkeypatch):
+    monkeypatch.setenv('PUBLISH_ENABLED','true')
+    monkeypatch.setenv('PUBLISH_DRY_RUN','false')
+    monkeypatch.setenv('BUFFER_ACCESS_TOKEN','token')
+    calls=[]
+    def fake_post(url,**kwargs):
+        calls.append(kwargs['json'])
+        return SimpleNamespace(raise_for_status=lambda:None,json=lambda:{'data':{'channel':{'id':'c1','name':'Test','service':'facebook','type':'page','isDisconnected':True,'isQueuePaused':False}}})
+    monkeypatch.setattr(integrations.requests,'post',fake_post)
+    manifest=tmp_path/'manifest.json'
+    with pytest.raises(RuntimeError,match='disconnected'):
+        integrations.buffer_queue('https://cloud.invalid/video','caption',['c1'],enabled=True,manifest_path=manifest,content_key='blocked')
+    assert len(calls)==1
+    assert not manifest.exists()
