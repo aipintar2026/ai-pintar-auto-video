@@ -93,6 +93,7 @@ def test_buffer_channel_uses_notification_for_fb_group():
     assert integrations._post_metadata({'service':'instagram','type':'business'},'Title\nCaption')['instagram']['type']=='reel'
     assert integrations._post_metadata({'service':'facebook','type':'page'},'Title')['facebook']['type']=='reel'
     assert integrations._post_metadata({'service':'youtube','type':'channel'},'Title')['youtube']['categoryId']=='27'
+    assert integrations._post_metadata({'service':'tiktok','type':'account'},'Title')['tiktok']['isAiGenerated'] is True
     with pytest.raises(RuntimeError): integrations._post_metadata({'service':'pinterest','type':'account'},'Title')
 
 
