@@ -51,6 +51,7 @@ jobs:
             output_offline/final_video.mp4
             output_offline/caption.txt
             output_offline/subtitles.srt
+            output_offline/subtitles.ass
             output_offline/manifest.json
             output_offline/script.txt
           if-no-files-found: error
