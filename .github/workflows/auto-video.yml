@@ -57,5 +57,7 @@ jobs:
             output_offline/subtitles.ass
             output_offline/manifest.json
             output_offline/script.txt
+            output_offline/cover.jpg
+            output_offline/presenter_master.png
           if-no-files-found: error
           retention-days: 7
