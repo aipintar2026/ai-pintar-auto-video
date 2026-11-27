@@ -6,7 +6,7 @@ from .topic_memory import TopicMemory
 from .production import make_story
 from .integrations import pixabay_download, create_tts, cloudinary_upload, buffer_queue
 from .qc import probe_video, prepublish_checks
-from .publish_guard import check_publish_allowed
+from .publish_guard import check_publish_allowed\nfrom .talking_avatar import generate_talking_avatar
 
 ROOT=Path(__file__).resolve().parent.parent
 
