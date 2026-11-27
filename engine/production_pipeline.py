@@ -209,7 +209,7 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
             avatar_mode='talking_avatar'
         vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',avatar_render,vid,music=music)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
-        qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'])
+        qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
         manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],
                   'avatar_mode':avatar_mode,'avatar_source':str(master),'cover':cover_qc,
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
