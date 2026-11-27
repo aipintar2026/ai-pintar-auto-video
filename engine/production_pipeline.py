@@ -107,7 +107,7 @@ def caption_and_srt(topic, script, duration, output):
     caption=f"{topic['title']}\n\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
     Path(output/'caption.txt').write_text(caption,encoding='utf-8')
     chunks=_subtitle_chunks(script)
-    weights=[max(4,len(chunk.split())) for chunk in chunks]
+    weights=[max(11,len(chunk)) for chunk in chunks]
     total=sum(weights)
     elapsed=0.0
     cues=[]
