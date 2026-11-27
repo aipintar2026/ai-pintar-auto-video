@@ -33,7 +33,7 @@ video=OUT/"final_video.mp4"
 ffmpeg_render(clips,voice,OUT/"subtitles.srt",avatar,video,music=music,fps=10)
 cover=OUT/"cover.jpg"
 cover_qc=create_cover_from_video(clips[0],cover,TOPIC["title"])
-qc=prepublish_checks(video,OUT/"caption.txt",TOPIC["id"],OUT/"subtitles.srt",cover=cover,cover_title=TOPIC["title"])
+qc=prepublish_checks(video,OUT/"caption.txt",TOPIC["id"],OUT/"subtitles.srt",cover=cover,cover_title=TOPIC["title"],cover_layout=cover_qc)
 manifest={"mode":"offline_synthetic","topic":TOPIC,"qc":qc,"external_calls":False,"publish":False,"presenter_overlay":True,"presenter_master_generated":True,"cover_qc":cover_qc,"music_mix":True}
 (OUT/"manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False),encoding="utf-8")
 print(json.dumps(manifest,indent=2,ensure_ascii=False))
