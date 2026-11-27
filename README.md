@@ -20,7 +20,7 @@
 ## Quick offline test (local)
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install --require-hashes -r requirements.lock
 sudo apt-get install ffmpeg   # Linux; install FFmpeg/ffprobe on other platforms
 python -m pytest -q
 python run_offline_pipeline.py
@@ -70,6 +70,10 @@ This uploads the QC-approved video to the staging folder and does not queue it t
 ## Buffer queue
 
 The helper is included and unit-tested, but **live account/channel testing has not been performed**. Queueing is not exposed by the staging GitHub workflow. For a deliberate local run only, after reviewing the video, confirming the public Cloudinary URL and checking the Buffer queue, the operator must explicitly pass `--publish`, channel IDs, and set `PUBLISH_ENABLED=true` and `PUBLISH_DRY_RUN=false`. The helper checks the channel, writes a per-channel manifest and does not blindly retry `pending`/`unknown` outcomes; reconcile them in Buffer first.
+
+## Dependency lock
+
+`requirements.in` lists direct dependencies and `requirements.lock` pins the full resolved set with hashes. Staging CI regenerates the lock using pinned pip/pip-tools, checks that the committed lock is unchanged, and installs with `--require-hashes`. The lock verification was included in Run #110 and passed.
 
 ## GitHub staging workflow
 
