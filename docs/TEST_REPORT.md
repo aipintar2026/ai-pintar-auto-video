@@ -1,16 +1,18 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Latest verified run:** Run #96  
-**Run ID:** `45936879451`  
-**Commit:** `08e683864b5e7d205a0db70016bb104f978f24a5`  
+**Latest verified run:** Run #110  
+**Run ID:** `45937716274`  
+**Commit:** `bc491076445c9fc233518d76b57295b4cffffcb2`  
 **Date:** 27 November 2026  
-**Artifact ID:** `15170991631`  
-**Artifact ZIP SHA-256:** `ef56a52479a18153eb316fce18d2637eb47c9df4f7aa04b13c74557900bcbf1d`
+**Artifact ID:** `15171790401`  
+**Artifact ZIP SHA-256:** `a1a88ab4688f9c6706ca92ff9237a12b13506fb93aadc402086224f7471da115`
 
 ## Automated CI
 
 - Python compilation: passed.
 - Unit tests: **51 passed, 0 failed**.
+- Hashed dependency lock regeneration and committed-lock diff: passed.
+- Installation with `--require-hashes`: passed.
 - Synthetic offline render: passed.
 - Artifact upload: passed.
 - All workflow steps completed successfully.
@@ -20,12 +22,11 @@
 - Duration: 35 seconds
 - Resolution: 1080 × 1920 portrait
 - Video/audio: H.264/AAC
-- Output video size: 985,467 bytes
 - Caption, SRT, ASS and manifest: present
 - Subtitle cues: 14
 - Generated presenter master: included
 - Chroma-key static overlay: exercised
-- Cover generation from a synthetic footage frame: exercised
+- Cover generation from synthetic footage frame: exercised
 - Publish: disabled
 - External provider calls: none
 
@@ -42,9 +43,9 @@
 - Subtitle QC: PASS
 - Cover: 1080 × 1920, 2 title lines, structural safe-zone QC PASS
 
-The cover QC checks file/resolution/title layout and safe-zone metrics. It does **not** automatically verify semantic footage-to-title match or replace human visual review. The presenter render is a generated static master illustration; it is not lip-synced.
+Cover QC verifies file/resolution/title layout and safe-zone metrics. It does **not** automatically verify semantic footage-to-title match or replace human visual review. The presenter render is a generated static illustration; it is not lip-synced.
 
-## Implemented and tested in the staging branch
+## Implemented and tested in staging
 
 - Deterministic master-presenter generator.
 - Static presenter chromakey overlay in FFmpeg render.
@@ -52,6 +53,8 @@ The cover QC checks file/resolution/title layout and safe-zone metrics. It does 
 - Cover generation and structural cover QC.
 - SRT minimum dwell-time and character-speed validation.
 - ASS/SRT cue parity, font-size and safe-zone validation.
+- Direct dependency input and full hash-locked requirements.
+- CI regenerates the lock, verifies the committed file has no diff, and installs with `--require-hashes`.
 - Offline pipeline artifact includes video, cover and presenter master.
 
 ## Mocked integration coverage
@@ -67,8 +70,7 @@ Pixabay selection/download, Edge TTS, Cloudinary signed-upload validation, Buffe
 - Selected talking-avatar engine and real lip-sync
 - Human visual/semantic review of presenter, cover and footage alignment
 - Durable state/reconciliation across ephemeral runners
-- Dependency lock/hash verification
-- Review of the active production workflow on main before any migration
+- Production workflow review and migration approval
 
 ## Safety boundary
 
