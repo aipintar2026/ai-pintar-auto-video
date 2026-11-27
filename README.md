@@ -8,8 +8,11 @@
 - Structured Indonesian script generator (hook, problem, solution, insight, CTA)
 - Pixabay search/download with 24-hour result cache and used-ID tracking
 - Edge TTS (`id-ID-ArdiNeural` by default)
-- FFmpeg 1080×1920 render, burned subtitles (SRT + ASS), optional approved presenter image/video overlay, optional licensed music at low gain
-- QC for video/audio streams, resolution, duration, caption, subtitle/ASS canvas and topic ID
+- FFmpeg 1080×1920 render, burned subtitles (SRT + ASS), optional licensed music
+- Deterministic illustrated master-presenter generator; static chroma-key overlay
+- Opt-in talking-avatar adapter wiring via `TALKING_AVATAR_RUNNER` (engine not selected/live-tested)
+- Cover generation from the first footage frame with title overlay and structural QC
+- QC for video/audio streams, resolution, duration, caption, subtitle dwell/CPS, ASS/SRT parity and cover safe-zone
 - Signed Cloudinary upload helper (optional local staging test)
 - Buffer GraphQL queue helper with channel checks and manifest reconciliation; **not invoked by the GitHub safety workflow**
 - Offline synthetic-media test and unit tests
@@ -23,6 +26,8 @@ python -m pytest -q
 python run_offline_pipeline.py
 ```
 
+The offline pipeline produces a synthetic video, caption, SRT/ASS, manifest, generated presenter master and cover. It makes no external provider calls and does not publish.
+
 ## Live media test (local)
 
 Set `PIXABAY_API_KEY` and install requirements. Optional `TTS_VOICE` defaults to `id-ID-ArdiNeural`. Then:
@@ -31,14 +36,22 @@ Set `PIXABAY_API_KEY` and install requirements. Optional `TTS_VOICE` defaults to
 python run_production.py --output output_production
 ```
 
-This downloads five unique footage clips, generates narration, subtitles and a video, and runs QC. It does **not** upload to Cloudinary or queue posts.
+This downloads five unique footage clips, generates narration, subtitles, presenter overlay and cover, then runs QC. It does **not** upload to Cloudinary or queue posts.
 
-Optional approved presenter asset:
+The master presenter is generated automatically when no existing presenter path is supplied. It is a deterministic illustration on chroma-green; human visual acceptance is still required. A supplied image/video presenter may be passed with `--avatar`.
 
-- `assets/presenter.png` for a static overlay; or
-- an approved `assets/presenter.mp4`/`.mov`/`.mkv`/`.webm` clip for a video overlay.
+## Talking-avatar (opt-in)
 
-This is an overlay, not automatic avatar creation or lip-sync. Optional music must be supplied by the operator with rights to use it:
+The adapter is wired but no engine is selected or validated. A configured runner must accept `{image}`, `{audio}`, and `{output}` placeholders:
+
+```bash
+export TALKING_AVATAR_RUNNER='your-approved-runner --image {image} --audio {audio} --output {output}'
+python run_production.py --output output_production
+```
+
+Use only a runner whose provider, license, runtime, cost and output quality have been reviewed. A generated talking clip is chroma-keyed in the overlay path. Validate lip-sync, identity, cropping and quality on a short test before accepting the engine. No publishing is enabled by the adapter.
+
+Optional music must be supplied by the operator with rights to use it:
 
 ```bash
 python run_production.py --music assets/music.mp3
@@ -52,7 +65,7 @@ Set the three Cloudinary secrets in the environment and run:
 python run_production.py --upload-cloudinary
 ```
 
-This uploads the QC-approved video to the staging folder and does not queue it to social channels.
+This uploads the QC-approved video to the staging folder and does not queue it to social channels. Live account validation is not part of GitHub CI.
 
 ## Buffer queue
 
@@ -70,7 +83,3 @@ The current workflow is already in `.github/workflows/auto-video.yml`. See `docs
 - Live Pixabay/TTS and Cloudinary checks are separate local CLI actions, not workflow inputs.
 - The existing `main` production schedule remains untouched and may queue posts independently. This repair branch does not stop or modify it.
 - Do not merge staging into `main` or change AI PINTAR 1 before explicit approval.
-
-## Official presenter master reference
-
-AI PINTAR Host must use the approved master image supplied by the project owner; do not substitute generated or search-result faces. Install the master reference image as `assets/aipintar_host_master.jpg` (preferred), or `assets/presenter_master.jpg`, or `assets/presenter.png`. The production CLI auto-selects the first existing candidate unless `--avatar` is provided explicitly. The current FFmpeg avatar feature is a static/video overlay only: it does not generate facial animation or lip-sync. The master reference image is not committed by this code change; the owner-provided image must be securely added before live presenter validation.
