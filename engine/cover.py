@@ -71,11 +71,13 @@ def create_cover_from_video(video_path, output, title, frame_time=1.0):
 
 def validate_cover(path,title,lines=None,box_top=None,box_bottom=None):
     p=Path(path)
-    if not p.exists() or p.stat().st_size<10_000:
-        raise RuntimeError("Cover QC: file hilang atau terlalu kecil.")
+    if not p.exists():
+        raise RuntimeError("Cover QC: file hilang.")
     with Image.open(p) as im:
         if im.size!=(WIDTH,HEIGHT):
             raise RuntimeError("Cover QC: resolusi harus 1080x1920.")
+    if p.stat().st_size<10_000:
+        raise RuntimeError("Cover QC: file terlalu kecil.")
     if not str(title).strip():
         raise RuntimeError("Cover QC: judul kosong.")
     line_count=len(lines or _wrap_title(str(title),_font(76),800))
