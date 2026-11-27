@@ -137,7 +137,19 @@ def test_cover_generation_and_structural_qc(tmp_path):
     assert report["cover_qc_status"]=="PASS"
     assert report["resolution"]=="1080x1920"
     assert report["safe_zone"]=="PASS"
+    assert report["safe_zone_checked"] is True
+    assert report["box_top"] is not None and report["box_bottom"] is not None
     assert cover.exists() and cover.stat().st_size>10_000
+
+
+def test_cover_qc_without_layout_metadata_does_not_claim_safe_zone(tmp_path):
+    from PIL import Image
+    from engine.cover import validate_cover
+    path=tmp_path/"cover.jpg"
+    Image.new("RGB",(1080,1920),(30,60,90)).save(path,"JPEG",quality=90)
+    report=validate_cover(path,"title")
+    assert report["safe_zone"]=="NOT_CHECKED"
+    assert report["safe_zone_checked"] is False
 
 
 def test_cover_qc_rejects_wrong_resolution(tmp_path):
