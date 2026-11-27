@@ -44,3 +44,8 @@ Mock coverage includes Pixabay selection/download, Edge TTS, Cloudinary signed-u
 ## Safety boundary
 
 PR #3 is staging repair only. No merge, production workflow changes, schedule changes or publication were performed. The production workflow on main remains untouched and separately under review.
+
+
+## QC subtitle validation changes (commit `99689a1` and preceding QC commit)
+
+New automated checks are added for minimum cue duration (0.45 seconds), subtitle character speed (24 characters/second), ASS/SRT cue-count parity, ASS font size bounds, lower-center alignment, and vertical safe-zone margin. Negative tests cover too-short cues, fast cues and ASS dialogue mismatch; positive tests check safe-zone metrics. These changes have not yet been confirmed by a fresh CI run; pending CI evidence, these remain implemented but unverified in CI.
