@@ -2,7 +2,7 @@
 
 ## Presenter
 
-The renderer accepts a static image overlay or a supplied video presenter clip. The adapter boundary for an external talking-avatar runner is unit-tested, but it is not wired into the production pipeline and no provider/engine has been selected or live-tested. The approved presenter master image is not installed in the repository. Do not substitute generated or search-result faces. Static/video overlay is not lip-sync.
+The renderer accepts a static image overlay or a supplied video presenter clip. The adapter is now wired into the staging production pipeline when `TALKING_AVATAR_RUNNER` is configured and a presenter master is supplied. No provider/engine has been selected or live-tested; this remains an unvalidated integration. The approved presenter master image is not installed in the repository. Do not substitute generated or search-result faces. Static/video overlay is not lip-sync.
 
 ## Music
 
