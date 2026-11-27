@@ -14,7 +14,7 @@
 
 ## Implemented subtitle renderer
 
-The current staging render creates both SRT and ASS. ASS uses an explicit 1080×1920 canvas, DejaVu Sans 34 px, 2 px outline, 1 px shadow, bottom-center alignment and 300 px bottom margin. The SRT/ASS phrase chunks are limited to two lines. CI checks the ASS canvas and performs a synthetic render; manual frame inspection is required for semantic alignment and safe zones.
+The current staging render creates both SRT and ASS. ASS uses an explicit 1080×1920 canvas, DejaVu Sans 34 px, 2 px outline, 1 px shadow, bottom-center alignment and 300 px bottom margin. The SRT/ASS phrase chunks are limited to two lines. Automated QC now validates SRT cue durations (minimum 0.45s), character speed (maximum 24 characters/second), cue sequence, timing bounds, 2-line/34-character limits, ASS dialogue count parity, font size range (28–48), lower-center alignment, and vertical safe-zone margin (200–450). The QC report explicitly marks manual visual review as required; it does not claim automated face/object obstruction or semantic footage matching.
 
 ## Cover / thumbnail
 
@@ -34,4 +34,4 @@ The current staging render creates both SRT and ASS. ASS uses an explicit 1080×
 - Check timing, line breaks, safe zones, and consistency.
 - Fail QC or flag for review when these checks cannot be verified automatically.
 
-Cover/thumbnail generation and semantic subtitle-to-footage QC are not implemented in this staging safety package.
+Cover/thumbnail generation and semantic subtitle-to-footage QC are not implemented in this staging safety package. Cover QC remains marked NOT_IMPLEMENTED in the report and manual frame inspection remains a release prerequisite.
