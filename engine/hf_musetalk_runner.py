@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import shutil
 from pathlib import Path
-from urllib.parse import urlparse
 
 import requests
 
@@ -38,6 +37,27 @@ def _resolve_output(value, output: Path):
     raise RuntimeError("MuseTalk Space output path was not available locally or as a URL.")
 
 
+def _patch_boolean_schema_compat():
+    """Work around gradio_client's parser crashing on JSON Schema boolean nodes."""
+    try:
+        import gradio_client.utils as client_utils
+    except (ImportError, ModuleNotFoundError):
+        return
+    parser = getattr(client_utils, "_json_schema_to_python_type", None)
+    if not callable(parser) or getattr(parser, "_ai_pintar_bool_schema_compat", False):
+        return
+
+    def compatible_parser(schema, defs=None):
+        # Boolean JSON Schema nodes (e.g. additionalProperties: false) are valid.
+        # This only affects client-side type introspection, not server validation.
+        if isinstance(schema, bool):
+            return "Any"
+        return parser(schema, defs)
+
+    compatible_parser._ai_pintar_bool_schema_compat = True
+    client_utils._json_schema_to_python_type = compatible_parser
+
+
 def run_musetalk_space(image, audio, output, space="henrybit/musetalk-1-5"):
     image, audio, output = Path(image), Path(audio), Path(output)
     if not image.is_file():
@@ -50,6 +70,7 @@ def run_musetalk_space(image, audio, output, space="henrybit/musetalk-1-5"):
     except ImportError as exc:
         raise RuntimeError("Install the pinned optional dependency gradio_client to use this runner.") from exc
 
+    _patch_boolean_schema_compat()
     client = Client(space, verbose=False)
     # The Space's generate button inputs are audio, image/video, bbox shift,
     # margin, parsing mode, and cheek widths.
