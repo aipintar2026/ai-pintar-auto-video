@@ -70,13 +70,11 @@ def test_prepublish_qc_accepts_valid_srt_and_ass(tmp_path, monkeypatch):
     video.write_bytes(b"x"*100_000)
     caption=tmp_path/"caption.txt"
     caption.write_text("Caption",encoding="utf-8")
+    caption_and_srt({"title":"Test"},"Short readable cue.",35.0,tmp_path)
     srt=tmp_path/"subtitles.srt"
-    srt.write_text("1\n00:00:00,000 --> 00:00:01,500\nShort cue\n",encoding="utf-8")
-    ass=tmp_path/"subtitles.ass"
-    ass.write_text("[Script Info]\nPlayResX: 1080\nPlayResY: 1920\n[Events]\nDialogue: 0,0:00:00.00,0:00:01.50,Default,,0,0,0,,Short cue\n",encoding="utf-8")
     monkeypatch.setattr("engine.qc.probe_video",lambda p:{"duration":35,"resolution":"1080x1920"})
     report=prepublish_checks(video,caption,"topic",srt)
-    assert report["subtitle_cues"]==1
+    assert report["subtitle_qc"]["cue_count"]>=1
 
 @pytest.mark.parametrize("srt,reason", [
     ("2\n00:00:00,000 --> 00:00:01,000\nText\n", "nomor"),
@@ -127,3 +125,25 @@ def test_ass_qc_accepts_safe_zone_style(tmp_path):
     stats=_validate_ass(tmp_path/"subtitles.ass",1)
     assert stats["alignment"]=="lower-center"
     assert 200<=stats["margin_vertical"]<=450
+
+
+def test_cover_generation_and_structural_qc(tmp_path):
+    from PIL import Image
+    from engine.cover import generate_cover_from_frame
+    frame=tmp_path/"frame.jpg"
+    Image.new("RGB",(1080,1920),(35,65,100)).save(frame,"JPEG")
+    cover=tmp_path/"cover.jpg"
+    report=generate_cover_from_frame(frame,cover,"BELAJAR AI DARI DASAR")
+    assert report["cover_qc_status"]=="PASS"
+    assert report["resolution"]=="1080x1920"
+    assert report["safe_zone"]=="PASS"
+    assert cover.exists() and cover.stat().st_size>10_000
+
+
+def test_cover_qc_rejects_wrong_resolution(tmp_path):
+    from PIL import Image
+    from engine.cover import validate_cover
+    path=tmp_path/"cover.jpg"
+    Image.new("RGB",(640,480),(30,60,90)).save(path,"JPEG",quality=90)
+    with pytest.raises(RuntimeError,match="1080x1920"):
+        validate_cover(path,"title")
