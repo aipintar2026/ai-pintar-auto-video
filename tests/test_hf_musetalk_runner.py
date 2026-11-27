@@ -45,3 +45,26 @@ def test_runner_rejects_missing_input(tmp_path):
         assert "Master image" in str(exc)
     else:
         raise AssertionError("missing input must fail")
+
+
+def test_boolean_schema_compat_patch(tmp_path, monkeypatch):
+    fake_package = ModuleType("gradio_client")
+    fake_package.__path__ = []
+    fake_utils = ModuleType("gradio_client.utils")
+    calls = []
+
+    def original(schema, defs=None):
+        calls.append(schema)
+        return "parsed"
+
+    fake_utils._json_schema_to_python_type = original
+    fake_package.utils = fake_utils
+    monkeypatch.setitem(sys.modules, "gradio_client", fake_package)
+    monkeypatch.setitem(sys.modules, "gradio_client.utils", fake_utils)
+
+    hf_musetalk_runner._patch_boolean_schema_compat()
+    patched = fake_utils._json_schema_to_python_type
+    assert patched(False) == "Any"
+    assert patched(True) == "Any"
+    assert patched({"type": "object"}) == "parsed"
+    assert calls == [{"type": "object"}]
