@@ -6,7 +6,10 @@ from .topic_memory import TopicMemory
 from .production import make_story
 from .integrations import pixabay_download, create_tts, cloudinary_upload, buffer_queue
 from .qc import probe_video, prepublish_checks
-from .publish_guard import check_publish_allowed\nfrom .talking_avatar import generate_talking_avatar
+from .publish_guard import check_publish_allowed
+from .talking_avatar import generate_talking_avatar
+from .cover import create_cover_from_video
+from .presenter import generate_master_presenter
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -60,9 +63,9 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
     filters.append(f"[bg]subtitles='{sub_path}'[sub]")
     if avatar_index is not None:
         if avatar_kind == "video":
-            filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar]")
+            filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS,chromakey=0x00ff00:0.25:0.08[avatar]")
         else:
-            filters.append(f"[{avatar_index}:v]scale=280:-2,trim=duration={duration:.6f}[avatar]")
+            filters.append(f"[{avatar_index}:v]scale=280:-2,trim=duration={duration:.6f},chromakey=0x00ff00:0.25:0.08[avatar]")
         filters.append("[sub][avatar]overlay=W-w-56:120:eof_action=repeat[vout]")
         video_label="vout"
     else:
@@ -190,9 +193,27 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
         caption=caption_and_srt(topic,script,dur,out)
-        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',avatar,vid,music=music)
-        qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt')
-        manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],'avatar_overlay':bool(avatar and Path(avatar).exists()),'music_overlay':bool(music and Path(music).exists()),'qc':qc,'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
+
+        master=Path(avatar) if avatar else None
+        if master and not master.is_file():
+            raise FileNotFoundError(f'Master presenter image tidak ditemukan: {master}')
+        if master is None:
+            master=ROOT/'assets'/'aipintar_host_master.png'
+            if not master.exists():
+                master=generate_master_presenter(out/'presenter_master.png')
+        avatar_render=str(master)
+        avatar_mode='static_overlay'
+        if os.environ.get('TALKING_AVATAR_RUNNER','').strip():
+            talking=out/'presenter_talking.mp4'
+            avatar_render=generate_talking_avatar(master,audio,talking)
+            avatar_mode='talking_avatar'
+        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',avatar_render,vid,music=music)
+        cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
+        qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover)
+        manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],
+                  'avatar_mode':avatar_mode,'avatar_source':str(master),'cover':cover_qc,
+                  'music_overlay':bool(music and Path(music).exists()),'qc':qc,
+                  'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
         (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
         _save_media_ids(media_ids_path,ids)
         if upload_cloudinary:
