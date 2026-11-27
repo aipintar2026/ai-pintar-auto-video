@@ -89,3 +89,41 @@ def test_srt_qc_rejects_sequence_duration_and_readability(tmp_path, srt, reason)
     path.write_text(srt,encoding="utf-8")
     with pytest.raises(RuntimeError,match=reason):
         _validate_srt(path,video_duration=35)
+
+def test_srt_qc_reports_readability_metrics(tmp_path):
+    path=tmp_path/"metrics.srt"
+    path.write_text("1\n00:00:00,000 --> 00:00:02,000\nReadable phrase\n",encoding="utf-8")
+    from engine.qc import _validate_srt
+    stats=_validate_srt(path,video_duration=3)
+    assert stats["cue_count"]==1
+    assert stats["max_cps"]<=24
+    assert stats["min_cue_duration"]==2.0
+
+
+@pytest.mark.parametrize("srt,reason", [
+    ("1\n00:00:00,000 --> 00:00:00,300\nToo short\n", "terlalu singkat"),
+    ("1\n00:00:00,000 --> 00:00:01,000\n" + "x"*25 + "\n", "terlalu cepat"),
+])
+def test_srt_qc_rejects_unreadable_speed(tmp_path,srt,reason):
+    path=tmp_path/"speed.srt"
+    path.write_text(srt,encoding="utf-8")
+    from engine.qc import _validate_srt
+    with pytest.raises(RuntimeError,match=reason):
+        _validate_srt(path,video_duration=35)
+
+
+def test_ass_qc_rejects_dialogue_count_mismatch(tmp_path):
+    from engine.qc import _validate_ass
+    path=tmp_path/"subtitles.ass"
+    path.write_text("[Script Info]\nPlayResX: 1080\nPlayResY: 1920\n[Events]\nDialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,Text\n",encoding="utf-8")
+    with pytest.raises(RuntimeError,match="jumlah ASS dialogue"):
+        _validate_ass(path,2)
+
+
+def test_ass_qc_accepts_safe_zone_style(tmp_path):
+    from engine.qc import _validate_ass
+    from engine.production_pipeline import caption_and_srt
+    caption_and_srt({"title":"Test"},"A short readable sentence.",3.0,tmp_path)
+    stats=_validate_ass(tmp_path/"subtitles.ass",1)
+    assert stats["alignment"]=="lower-center"
+    assert 200<=stats["margin_vertical"]<=450
