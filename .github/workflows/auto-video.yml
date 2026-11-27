@@ -91,7 +91,7 @@ jobs:
         env:
           TALKING_AVATAR_SPACE: henrybit/musetalk-1-5
           TTS_VOICE: id-ID-ArdiNeural
-        run: python engine/run_talking_avatar_live_test.py
+        run: python -m engine.run_talking_avatar_live_test
 
       - name: Upload live talking-avatar test artifact
         if: always()
