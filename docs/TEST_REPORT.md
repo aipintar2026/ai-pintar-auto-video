@@ -1,11 +1,10 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Latest verified run:** GitHub Actions run #68  
-**Run ID:** `45867797228`  
-**Commit:** `52698e5e16c524b62beda4151c222201ebd26a42`  
+**Latest verified run:** GitHub Actions run #69  
+**Run ID:** `45912116222`  
+**Commit:** `02cc680c3c28a30664981e83d70c88e7256db416`  
 **Date:** 27 November 2026  
-**Artifact ID:** `15140229403`  
-**Artifact SHA-256:** `4775f765274b542126ffb5192672b3ad48c42f60bbf10f6ad9f8b04d79ef0a37`
+**Artifact ID:** `15160776246`
 
 ## Automated tests
 
@@ -16,39 +15,40 @@
 
 ## Offline render QC
 
-- Duration: 30.0 seconds
+- Duration: 30 seconds (synthetic test)
 - Resolution: 1080 × 1920 portrait
 - Video: H.264
 - Audio: AAC
-- Caption: present
-- SRT/ASS subtitle files: present; ASS canvas explicitly 1080 × 1920
-- Subtitle cues: 14
-- Presenter overlay: synthetic block only
-- Music mix: synthetic audio bed exercised
+- SRT/ASS subtitles and manifest: included in the test artifact
 - Publish: disabled
 - External provider calls: none
 
-## Manual frame QC
+## Verified workflow steps
 
-Sample frames at 5, 15 and 25 seconds were inspected from the run #68 artifact. Subtitles were readable in these samples and did not visibly overlap the synthetic avatar block. This is limited sample-based visual review, not semantic footage/subtitle alignment, cover QC, or validation with a real presenter.
+All job steps in Run #69 completed successfully: checkout, Python setup, FFmpeg install, dependency install, compilation, unit tests, synthetic offline pipeline, and artifact upload.
 
-## Mocked integration coverage
+Run #69 re-verifies the existing offline safety milestone; it does not by itself increase overall audit progress.
 
-- Pixabay response/download selection
-- Edge TTS API path
-- Cloudinary signed-upload request and response validation
-- Buffer channel lookup, GraphQL payload, metadata, scheduling mode, manifest success/unknown reconciliation
-- Publish guard and duplicate/unknown reconciliation
-- Talking-avatar adapter validation, timeout and output checks
-- Pipeline orchestration and topic recovery after simulated download/script failures
-- Stable per-topic/caption reconciliation key across media regeneration
+## QC boundary
 
-## Not live-validated / remaining
+This run verifies synthetic offline rendering and CI execution. It is **not** semantic footage/subtitle QC, cover QC, a real-presenter render, talking-avatar engine validation, or live provider testing.
 
-No real Pixabay key, Edge TTS network call, Cloudinary account upload, Buffer account/channel queue, talking-avatar engine, presenter master asset, cover generation or production footage was used.
+## Mocked integration coverage (previously documented)
 
-Stable local reconciliation keys and per-run manifests improve retry safety in tests, but do not replace durable manifest storage across ephemeral runners. Durable state remains a migration prerequisite.
+Mock coverage includes Pixabay selection/download path, Edge TTS path, Cloudinary signed-upload validation, Buffer scheduling/reconciliation behavior, publish guards, talking-avatar adapter validation, pipeline orchestration/recovery, and stable reconciliation keys. Mock coverage does not prove live service behavior.
 
-## Main-branch boundary
+## Pending live and production validation
 
-The existing `main` production schedule is active and untouched. The staging repair workflow is offline-only and does not queue or publish posts. Production workflow safety remains separately under audit.
+- Live Pixabay access and download
+- Live Edge TTS/network execution
+- Cloudinary account upload
+- Buffer channel/API validation (no content publication)
+- Selected talking-avatar engine and lip-sync
+- Approved master presenter installed into repository/pipeline
+- Cover generation and semantic visual QC
+- Durable state across ephemeral runners and production reconciliation
+- Dependency lock/hash verification
+
+## Safety boundary
+
+PR #3 is staging repair only. No merge, production workflow changes, schedule changes, or publication were performed. The production workflow on main remains untouched and is separately under review.
