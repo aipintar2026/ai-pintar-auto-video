@@ -1,14 +1,15 @@
 # Talking-avatar integration sequence
 
-The adapter is wired into the staging production pipeline as an opt-in path. It is **not** a claim that facial animation or lip-sync is operational.
+The adapter remains opt-in. A real external engine is now available as a staging integration path: MuseTalk 1.5 through the public Hugging Face Space `henrybit/musetalk-1-5`.
 
-1. If no approved master image path is supplied, the pipeline generates a deterministic illustrated master with `engine.presenter.generate_master_presenter` into the output folder. The generated image uses chroma-green for static overlay. Human visual acceptance is still required.
-2. Select an approved talking-avatar runner (provider/runtime, cost, GPU requirements and license must be reviewed).
-3. Configure `TALKING_AVATAR_RUNNER` as a command template containing `{image}`, `{audio}`, and `{output}`.
-4. The pipeline calls `engine.talking_avatar.generate_talking_avatar(master_image, narration_audio, output_video)` when the runner variable is set. The adapter validates inputs, timeout and output-file size.
-5. Validate face identity, lip-sync, audio timing, crop, chroma-key/background and visual quality on a short test before accepting the engine.
-6. Keep the static-master overlay fallback until a talking-avatar test is accepted. No publishing is enabled by this adapter.
+1. The live-validation script generates the AI PINTAR master illustration and a short Indonesian test voice using Edge TTS.
+2. It sends only those generated test assets to the public Hugging Face Space. No user photo, production video, Buffer/Cloudinary credential or post is used.
+3. The Space returns a video, which is checked by FFprobe for video/audio streams and duration parity against the driving audio.
+4. The test artifact includes the presenter master, test audio, returned video and JSON report. The output file SHA-256 is recorded.
+5. A duration-parity PASS is not a perceptual lip-sync score. Human review is still required to confirm mouth movement, face identity, crop, flicker, chroma/background artifacts and visual quality.
 
-Runner command contract: placeholders are shell-quoted and the command is invoked as a subprocess. The approved runner must be installed locally and its license/provider terms reviewed. Do not place API keys in the command string; use provider-managed environment variables.
+The runner is `engine/hf_musetalk_runner.py`, and the adapter calls it through the existing `TALKING_AVATAR_RUNNER` command contract. The optional `gradio_client` dependency is installed separately and pinned in the live-validation workflow; it is not added to the normal runtime lock.
 
-Current status: adapter wiring and mocked contract tests pass. No engine is selected or live-tested, and lip-sync validation remains pending.
+The public Space is third-party and may be paused, queue-limited or change API shape. Image and audio are sent to that Space. The workflow uses synthetic media only and does not publish.
+
+Current status before live validation: code and mocked tests are present; actual engine availability and visual review are pending. Do not merge or publish based solely on duration-parity checks.

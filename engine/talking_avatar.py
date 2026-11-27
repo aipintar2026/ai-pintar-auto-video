@@ -1,33 +1,74 @@
-"""Talking-avatar adapter with opt-in runner and basic output validation.
-
-No provider is selected by default. The configured runner must accept image, audio,
-and output path placeholders. A runner/model license and provider terms require review.
-"""
+"""Talking-avatar adapter with output and audio/video duration-parity validation."""
 from __future__ import annotations
 import os, shlex, subprocess, json
 from pathlib import Path
 
 
-def _validate_video(path: Path):
-    """Require a readable video stream and positive duration using ffprobe."""
+def _probe_media(path: Path):
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries",
-         "format=duration:stream=codec_type,width,height",
+         "format=duration:stream=codec_type,width,height,duration",
          "-of", "json", str(path)],
         check=True, capture_output=True, text=True, timeout=30,
     )
     try:
-        metadata = json.loads(probe.stdout)
+        return json.loads(probe.stdout)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("Talking-avatar output could not be parsed by ffprobe.") from exc
+        raise RuntimeError("Talking-avatar media metadata could not be parsed by ffprobe.") from exc
+
+
+def _validate_video(path: Path):
+    """Require readable video and audio streams and a positive media duration."""
+    metadata = _probe_media(Path(path))
     videos = [s for s in metadata.get("streams", []) if s.get("codec_type") == "video"]
+    audios = [s for s in metadata.get("streams", []) if s.get("codec_type") == "audio"]
     if not videos:
         raise RuntimeError("Talking-avatar output contains no video stream.")
+    if not audios:
+        raise RuntimeError("Talking-avatar output contains no audio stream.")
     duration = float(metadata.get("format", {}).get("duration", 0) or 0)
     if duration <= 0:
         raise RuntimeError("Talking-avatar output has invalid duration.")
     return {"duration": duration, "width": int(videos[0].get("width", 0)),
-            "height": int(videos[0].get("height", 0))}
+            "height": int(videos[0].get("height", 0)), "audio": True}
+
+
+def _validate_lip_sync_output(output_video, narration_audio, tolerance_seconds=1.25):
+    """Verify output audio exists and duration is close to the driving narration.
+
+    This is a duration-parity gate, not a perceptual lip-sync score. Human visual
+    review of mouth movement and artifacts is still required.
+    """
+    output_video, narration_audio = Path(output_video), Path(narration_audio)
+    video_metadata = _probe_media(output_video)
+    videos = [s for s in video_metadata.get("streams", []) if s.get("codec_type") == "video"]
+    output_audios = [s for s in video_metadata.get("streams", []) if s.get("codec_type") == "audio"]
+    if not videos:
+        raise RuntimeError("Talking-avatar output contains no video stream.")
+    if not output_audios:
+        raise RuntimeError("Talking-avatar output contains no audio stream.")
+    video_duration = float(videos[0].get("duration") or video_metadata.get("format", {}).get("duration") or 0)
+    output_audio_duration = float(output_audios[0].get("duration") or video_metadata.get("format", {}).get("duration") or 0)
+    source_metadata = _probe_media(narration_audio)
+    source_duration = float(source_metadata.get("format", {}).get("duration", 0) or 0)
+    if min(video_duration, output_audio_duration, source_duration) <= 0:
+        raise RuntimeError("Talking-avatar output or driving audio has invalid duration.")
+    delta = abs(video_duration - source_duration)
+    audio_delta = abs(output_audio_duration - source_duration)
+    if delta > tolerance_seconds or audio_delta > tolerance_seconds:
+        raise RuntimeError(
+            f"Talking-avatar duration parity failed: video delta={delta:.3f}s, audio delta={audio_delta:.3f}s."
+        )
+    return {
+        "video_duration_seconds": round(video_duration, 3),
+        "output_audio_duration_seconds": round(output_audio_duration, 3),
+        "source_audio_duration_seconds": round(source_duration, 3),
+        "video_duration_delta_seconds": round(delta, 3),
+        "output_audio_duration_delta_seconds": round(audio_delta, 3),
+        "tolerance_seconds": tolerance_seconds,
+        "lip_sync_duration_parity": "PASS",
+        "perceptual_lip_sync_score": "NOT_MEASURED",
+    }
 
 
 def generate_talking_avatar(master_image, narration_audio, output_video, timeout=600):
@@ -47,5 +88,5 @@ def generate_talking_avatar(master_image, narration_audio, output_video, timeout
     subprocess.run(command, check=True, timeout=timeout)
     if not output.is_file() or output.stat().st_size < 100_000:
         raise RuntimeError("Talking-avatar runner did not produce a valid video file.")
-    _validate_video(output)
+    _validate_lip_sync_output(output, audio)
     return str(output)

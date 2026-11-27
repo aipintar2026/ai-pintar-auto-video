@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from types import SimpleNamespace
+import json
 import pytest
 from engine import talking_avatar
 
@@ -28,6 +29,21 @@ def test_adapter_checks_inputs(monkeypatch, tmp_path):
         talking_avatar.generate_talking_avatar(image, tmp_path/"missing.mp3", tmp_path/"out.mp4")
 
 
+def _fake_ffprobe(command, **kwargs):
+    path = Path(command[-1])
+    if path.name == "out.mp4":
+        data={"format":{"duration":"35"},"streams":[
+            {"codec_type":"video","width":1080,"height":1920,"duration":"35"},
+            {"codec_type":"audio","duration":"35"}]}
+    elif path.name == "audio.mp3":
+        data={"format":{"duration":"35"},"streams":[{"codec_type":"audio","duration":"35"}]}
+    else:
+        data={"format":{"duration":"35"},"streams":[
+            {"codec_type":"video","width":1080,"height":1920,"duration":"35"},
+            {"codec_type":"audio","duration":"35"}]}
+    return SimpleNamespace(returncode=0,stdout=json.dumps(data),stderr="")
+
+
 def test_adapter_runner_output_and_timeout(monkeypatch, tmp_path):
     monkeypatch.setenv("TALKING_AVATAR_RUNNER", "fake-runner --image {image} --audio {audio} --output {output}")
     image=tmp_path/"image.png"; image.write_bytes(b"image")
@@ -37,7 +53,7 @@ def test_adapter_runner_output_and_timeout(monkeypatch, tmp_path):
     def fake_run(command, check=True, timeout=None, capture_output=False, text=False):
         calls.append((command,check,timeout))
         if command[0] == "ffprobe":
-            return SimpleNamespace(returncode=0,stdout='{"format":{"duration":"35"},"streams":[{"codec_type":"video","width":1080,"height":1920}]}',stderr="")
+            return _fake_ffprobe(command)
         output.write_bytes(b"x"*100_000)
         return SimpleNamespace(returncode=0)
     monkeypatch.setattr(talking_avatar.subprocess,"run",fake_run)
@@ -45,6 +61,7 @@ def test_adapter_runner_output_and_timeout(monkeypatch, tmp_path):
     assert result==str(output)
     assert calls[0][1] is True and calls[0][2]==42
     assert "--image" in calls[0][0] and "--audio" in calls[0][0] and "--output" in calls[0][0]
+    assert len([c for c in calls if c[0][0]=="ffprobe"]) == 2
 
 
 def test_adapter_rejects_small_runner_output(monkeypatch, tmp_path):
@@ -58,13 +75,45 @@ def test_adapter_rejects_small_runner_output(monkeypatch, tmp_path):
 
 
 def test_video_probe_rejects_missing_video_stream(monkeypatch, tmp_path):
-    video=tmp_path/"video.mp4"
-    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda *a,**k: SimpleNamespace(stdout='{"format":{"duration":"10"},"streams":[{"codec_type":"audio"}]}'))
+    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda *a,**k: SimpleNamespace(stdout=json.dumps({"format":{"duration":"10"},"streams":[{"codec_type":"audio"}]})))
     with pytest.raises(RuntimeError,match="no video stream"):
-        talking_avatar._validate_video(video)
+        talking_avatar._validate_video(tmp_path/"video.mp4")
+
+
+def test_video_probe_rejects_missing_audio_stream(monkeypatch, tmp_path):
+    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda *a,**k: SimpleNamespace(stdout=json.dumps({"format":{"duration":"10"},"streams":[{"codec_type":"video","width":1080,"height":1920}]})))
+    with pytest.raises(RuntimeError,match="no audio stream"):
+        talking_avatar._validate_video(tmp_path/"video.mp4")
 
 
 def test_video_probe_reports_metadata(monkeypatch, tmp_path):
-    video=tmp_path/"video.mp4"
-    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda *a,**k: SimpleNamespace(stdout='{"format":{"duration":"35.5"},"streams":[{"codec_type":"video","width":1080,"height":1920}]}'))
-    assert talking_avatar._validate_video(video)=={"duration":35.5,"width":1080,"height":1920}
+    data={"format":{"duration":"35.5"},"streams":[
+        {"codec_type":"video","width":1080,"height":1920,"duration":"35.5"},
+        {"codec_type":"audio","duration":"35.5"}]}
+    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda *a,**k: SimpleNamespace(stdout=json.dumps(data)))
+    assert talking_avatar._validate_video(tmp_path/"video.mp4")=={"duration":35.5,"width":1080,"height":1920,"audio":True}
+
+
+def test_lip_sync_duration_parity_rejects_mismatch(monkeypatch, tmp_path):
+    video=tmp_path/"out.mp4"
+    audio=tmp_path/"audio.mp3"
+    video_data={"format":{"duration":"36"},"streams":[
+        {"codec_type":"video","width":1080,"height":1920,"duration":"36"},
+        {"codec_type":"audio","duration":"36"}]}
+    audio_data={"format":{"duration":"35"},"streams":[{"codec_type":"audio","duration":"35"}]}
+    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda command,**kwargs: SimpleNamespace(stdout=json.dumps(video_data if Path(command[-1]).name=="out.mp4" else audio_data)))
+    with pytest.raises(RuntimeError,match="duration parity failed"):
+        talking_avatar._validate_lip_sync_output(video,audio)
+
+
+def test_lip_sync_duration_parity_passes(monkeypatch, tmp_path):
+    video=tmp_path/"out.mp4"
+    audio=tmp_path/"audio.mp3"
+    video_data={"format":{"duration":"35.2"},"streams":[
+        {"codec_type":"video","width":1080,"height":1920,"duration":"35.2"},
+        {"codec_type":"audio","duration":"35.2"}]}
+    audio_data={"format":{"duration":"35"},"streams":[{"codec_type":"audio","duration":"35"}]}
+    monkeypatch.setattr(talking_avatar.subprocess,"run",lambda command,**kwargs: SimpleNamespace(stdout=json.dumps(video_data if Path(command[-1]).name=="out.mp4" else audio_data)))
+    report=talking_avatar._validate_lip_sync_output(video,audio)
+    assert report["lip_sync_duration_parity"]=="PASS"
+    assert report["perceptual_lip_sync_score"]=="NOT_MEASURED"
