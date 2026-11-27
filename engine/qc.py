@@ -1,6 +1,7 @@
 """Media quality checks for short-form video output."""
 from pathlib import Path
 import json, re, subprocess
+from .cover import validate_cover
 
 
 def probe_video(path: str):
@@ -94,7 +95,7 @@ def _validate_ass(path: Path, expected_cues):
     return {"ass_dialogue_count":len(dialogues),"font_size":fontsize,"alignment":"lower-center","margin_vertical":marginv}
 
 
-def prepublish_checks(video, caption, topic_id, subtitles):
+def prepublish_checks(video, caption, topic_id, subtitles, cover=None):
     report = probe_video(video)
     caption_path = Path(caption)
     srt_path = Path(subtitles)
@@ -108,8 +109,9 @@ def prepublish_checks(video, caption, topic_id, subtitles):
     ass_stats=_validate_ass(ass_path,srt_stats["cue_count"])
     if not topic_id:
         raise RuntimeError("QC: topic_id tidak tercatat.")
+    cover_stats=validate_cover(cover,topic_id) if cover else {"cover_qc_status":"NOT_IMPLEMENTED"}
     report.update({"caption": True,"subtitle": True,"ass_subtitle": True,"topic_id": topic_id,
                    "subtitle_qc":srt_stats,"ass_qc":ass_stats,
                    "automated_qc_status":"PASS","visual_review_required":True,
-                   "cover_qc_status":"NOT_IMPLEMENTED"})
+                   "cover_qc":cover_stats,"cover_qc_status":cover_stats.get("cover_qc_status","NOT_IMPLEMENTED")})
     return report
