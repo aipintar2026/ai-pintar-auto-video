@@ -147,3 +147,12 @@ def test_cover_qc_rejects_wrong_resolution(tmp_path):
     Image.new("RGB",(640,480),(30,60,90)).save(path,"JPEG",quality=90)
     with pytest.raises(RuntimeError,match="1080x1920"):
         validate_cover(path,"title")
+
+
+def test_generated_subtitles_pass_minimum_dwell_time_for_30s_story(tmp_path):
+    topic={"id":"test","title":"AI PINTAR offline pipeline test","angle":"testing pipeline"}
+    script=make_story(topic).narration()
+    caption_and_srt(topic,script,30.0,tmp_path)
+    stats=_validate_srt(tmp_path/"subtitles.srt",video_duration=30.0)
+    assert stats["min_cue_duration"]>=0.45
+    assert stats["max_cps"]<=24
