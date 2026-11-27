@@ -1,51 +1,75 @@
 # AI PINTAR 2.0 Staging Test Report
 
-**Latest CI confirmation:** Run #70  
-**Run ID:** `45925023349`  
-**Commit:** `84e403afbeb3e229afbfab97bf6f2ae0980dc829`  
+**Latest verified run:** Run #96  
+**Run ID:** `45936879451`  
+**Commit:** `08e683864b5e7d205a0db70016bb104f978f24a5`  
 **Date:** 27 November 2026  
-**Artifact ID:** `15165468848`  
-**Artifact SHA-256:** `63a81a14d84b99436e900d034db62f7be2ba56461a202eb3ecb4b18dcd7e9b2c`
+**Artifact ID:** `15170991631`  
+**Artifact ZIP SHA-256:** `ef56a52479a18153eb316fce18d2637eb47c9df4f7aa04b13c74557900bcbf1d`
 
-## Run #70 status
+## Automated CI
 
-The reported workflow steps succeeded: checkout, Python setup, FFmpeg setup, dependency install, compilation, unit-test step, offline render and artifact upload.
-
-Run #70 is a CI confirmation. It does not replace the more detailed test-count record from Run #69, nor validate live integrations.
-
-## Earlier detailed test record
-
-- Run #69: 42 tests passed, 0 failed.
+- Python compilation: passed.
+- Unit tests: **51 passed, 0 failed**.
 - Synthetic offline render: passed.
 - Artifact upload: passed.
-- 30-second synthetic render, 1080×1920, H.264/AAC, SRT/ASS and manifest.
-- No publication or external provider calls.
+- All workflow steps completed successfully.
 
-## QC boundary
+## Synthetic render evidence
 
-The staging runs verify synthetic/offline rendering and CI execution only. They are not semantic footage/subtitle QC, cover QC, a real presenter render, talking-avatar engine/lip-sync validation or live provider tests.
+- Duration: 35 seconds
+- Resolution: 1080 × 1920 portrait
+- Video/audio: H.264/AAC
+- Output video size: 985,467 bytes
+- Caption, SRT, ASS and manifest: present
+- Subtitle cues: 14
+- Generated presenter master: included
+- Chroma-key static overlay: exercised
+- Cover generation from a synthetic footage frame: exercised
+- Publish: disabled
+- External provider calls: none
 
-## Mock integration coverage (as documented)
+## Automated subtitle / cover QC
 
-Mock coverage includes Pixabay selection/download, Edge TTS, Cloudinary signed-upload validation, Buffer queue/reconciliation, publish guards, talking-avatar adapter validation, pipeline orchestration/recovery and stable reconciliation keys. Mock coverage is not live service validation.
+- Maximum subtitle line: 34 characters
+- Maximum character speed: 19.2 characters/second
+- Minimum cue duration: 0.564 seconds
+- Maximum cue duration: 3.438 seconds
+- ASS dialogue count: 14
+- ASS font size: 34
+- ASS alignment: lower-center
+- ASS vertical margin: 300
+- Subtitle QC: PASS
+- Cover: 1080 × 1920, 2 title lines, structural safe-zone QC PASS
 
-## Pending live and production validation
+The cover QC checks file/resolution/title layout and safe-zone metrics. It does **not** automatically verify semantic footage-to-title match or replace human visual review. The presenter render is a generated static master illustration; it is not lip-synced.
 
-- Live Pixabay access and download
-- Live TTS/network execution
+## Implemented and tested in the staging branch
+
+- Deterministic master-presenter generator.
+- Static presenter chromakey overlay in FFmpeg render.
+- Talking-avatar adapter wiring when `TALKING_AVATAR_RUNNER` is configured.
+- Cover generation and structural cover QC.
+- SRT minimum dwell-time and character-speed validation.
+- ASS/SRT cue parity, font-size and safe-zone validation.
+- Offline pipeline artifact includes video, cover and presenter master.
+
+## Mocked integration coverage
+
+Pixabay selection/download, Edge TTS, Cloudinary signed-upload validation, Buffer queue/reconciliation, publish guards, talking-avatar adapter contract, pipeline orchestration/recovery and reconciliation keys remain mock-tested. Mock tests do not prove live provider behavior.
+
+## Pending external or production validation
+
+- Live Pixabay access/download
+- Live Edge TTS network execution
 - Cloudinary account upload
 - Buffer channel/API validation (no content publication)
-- Selected talking-avatar engine and lip-sync
-- Owner-approved master presenter asset
-- Cover generation and semantic visual QC
-- Durable state across ephemeral runners and production reconciliation
+- Selected talking-avatar engine and real lip-sync
+- Human visual/semantic review of presenter, cover and footage alignment
+- Durable state/reconciliation across ephemeral runners
 - Dependency lock/hash verification
+- Review of the active production workflow on main before any migration
 
 ## Safety boundary
 
-PR #3 is staging repair only. No merge, production workflow changes, schedule changes or publication were performed. The production workflow on main remains untouched and separately under review.
-
-
-## QC subtitle validation changes (commit `99689a1` and preceding QC commit)
-
-New automated checks are added for minimum cue duration (0.45 seconds), subtitle character speed (24 characters/second), ASS/SRT cue-count parity, ASS font size bounds, lower-center alignment, and vertical safe-zone margin. Negative tests cover too-short cues, fast cues and ASS dialogue mismatch; positive tests check safe-zone metrics. These changes have not yet been confirmed by a fresh CI run; pending CI evidence, these remain implemented but unverified in CI.
+PR #3 remains staging-only, open/draft/unmerged. No merge, production workflow changes, schedule changes or publication were performed. The existing production workflow on `main` remains untouched and may queue content independently.
