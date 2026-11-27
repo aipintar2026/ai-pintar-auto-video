@@ -16,7 +16,7 @@ TOPIC={"id":"OFFLINE-TEST","title":"AI PINTAR offline pipeline test","angle":"te
 STORY=make_story(TOPIC)
 SCRIPT=STORY.narration()
 (OUT/"script.txt").write_text(SCRIPT,encoding="utf-8")
-DURATION=30
+DURATION=35
 clips=[]
 for i in range(5):
     clip=MEDIA/f"synthetic_{i}.mp4"
