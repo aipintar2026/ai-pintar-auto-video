@@ -18,20 +18,21 @@ The current staging render creates both SRT and ASS. ASS uses an explicit 1080×
 
 ## Cover / thumbnail
 
+Cover generation is implemented in the staging pipeline. It extracts a frame from the first footage clip and adds an AI PINTAR label plus a title in a dark, high-contrast overlay.
+
 - Create a distinct opening cover/thumbnail for every video, not a generic still.
 - Use a strong curiosity-based 3–7-word headline in large readable type, plus a visually relevant focal image.
 - Headline must promise a clear benefit or curiosity without misleading clickbait.
 - Keep text and important elements inside a centered mobile-safe area; avoid edges and lower UI zones.
-- Contrast headline and background; use a subtle dark gradient/overlay behind text only if needed.
+- Contrast headline and background; use a subtle dark overlay behind text only if needed.
 - Use consistent AI PINTAR brand colors/logo in a restrained way, not oversized.
 - For platforms that use a cover frame, set/choose the cover deliberately; where the API does not support cover upload, create the cover as the opening frame and document the platform limitation.
 
 ## QC checks
 
-- Verify subtitles do not obstruct faces, key objects, or footage.
-- Check cover readability at small phone size.
-- Check title and subtitles for spelling, natural Indonesian, and concise phrasing.
-- Check timing, line breaks, safe zones, and consistency.
+- Automated cover structural QC: file exists, 1080×1920 resolution, title non-empty, no more than 5 lines, and safe-zone layout PASS.
+- Automated subtitle QC: cue duration, CPS, sequence/timing, line length, ASS/SRT parity, font and safe-zone checks.
+- Human review remains required for semantic footage/title match, subtitle obstruction, face/key-object obstruction, small-screen readability and spelling/natural Indonesian.
 - Fail QC or flag for review when these checks cannot be verified automatically.
 
-Cover/thumbnail generation and semantic subtitle-to-footage QC are not implemented in this staging safety package. Cover QC remains marked NOT_IMPLEMENTED in the report and manual frame inspection remains a release prerequisite.
+Cover generation and structural QC are now exercised in the synthetic offline pipeline. Semantic cover/footage match and subtitle-to-footage semantic alignment are not automated; manual review remains a release prerequisite.
