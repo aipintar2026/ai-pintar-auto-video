@@ -83,6 +83,9 @@ def validate_cover(path,title,lines=None,box_top=None,box_bottom=None):
     line_count=len(lines or _wrap_title(str(title),_font(76),800))
     if line_count>5:
         raise RuntimeError("Cover QC: judul melebihi 5 baris.")
-    if box_top is not None and box_bottom is not None and (box_top<SAFE[1] or box_bottom>SAFE[3]):
-        raise RuntimeError("Cover QC: teks keluar dari safe zone.")
-    return {"cover_qc_status":"PASS","resolution":"1080x1920","title_lines":line_count,"safe_zone":"PASS","visual_review_required":True,"semantic_match":"NOT_AUTOMATED"}
+    safe_zone="NOT_CHECKED"
+    if box_top is not None and box_bottom is not None:
+        if box_top<SAFE[1] or box_bottom>SAFE[3]:
+            raise RuntimeError("Cover QC: teks keluar dari safe zone.")
+        safe_zone="PASS"
+    return {"cover_qc_status":"PASS","resolution":"1080x1920","title_lines":line_count,"lines":list(lines or []),"safe_zone":safe_zone,"safe_zone_checked":safe_zone=="PASS","box_top":box_top,"box_bottom":box_bottom,"visual_review_required":True,"semantic_match":"NOT_AUTOMATED"}
