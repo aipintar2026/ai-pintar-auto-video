@@ -95,7 +95,7 @@ def _validate_ass(path: Path, expected_cues):
     return {"ass_dialogue_count":len(dialogues),"font_size":fontsize,"alignment":"lower-center","margin_vertical":marginv}
 
 
-def prepublish_checks(video, caption, topic_id, subtitles, cover=None, cover_title=None):
+def prepublish_checks(video, caption, topic_id, subtitles, cover=None, cover_title=None, cover_layout=None):
     report = probe_video(video)
     caption_path = Path(caption)
     srt_path = Path(subtitles)
@@ -109,7 +109,8 @@ def prepublish_checks(video, caption, topic_id, subtitles, cover=None, cover_tit
     ass_stats=_validate_ass(ass_path,srt_stats["cue_count"])
     if not topic_id:
         raise RuntimeError("QC: topic_id tidak tercatat.")
-    cover_stats=validate_cover(cover,cover_title or topic_id) if cover else {"cover_qc_status":"NOT_IMPLEMENTED"}
+    layout=cover_layout or {}
+    cover_stats=validate_cover(cover,cover_title or topic_id,lines=layout.get("lines"),box_top=layout.get("box_top"),box_bottom=layout.get("box_bottom")) if cover else {"cover_qc_status":"NOT_IMPLEMENTED"}
     report.update({"caption": True,"subtitle": True,"ass_subtitle": True,"topic_id": topic_id,
                    "subtitle_qc":srt_stats,"ass_qc":ass_stats,
                    "automated_qc_status":"PASS","visual_review_required":True,
