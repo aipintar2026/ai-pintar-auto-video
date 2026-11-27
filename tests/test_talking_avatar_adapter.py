@@ -97,8 +97,8 @@ def test_video_probe_reports_metadata(monkeypatch, tmp_path):
 def test_lip_sync_duration_parity_rejects_mismatch(monkeypatch, tmp_path):
     video=tmp_path/"out.mp4"
     audio=tmp_path/"audio.mp3"
-    video_data={"format":{"duration":"36"},"streams":[
-        {"codec_type":"video","width":1080,"height":1920,"duration":"36"},
+    video_data={"format":{"duration":"37"},"streams":[
+        {"codec_type":"video","width":1080,"height":1920,"duration":"37"},
         {"codec_type":"audio","duration":"36"}]}
     audio_data={"format":{"duration":"35"},"streams":[{"codec_type":"audio","duration":"35"}]}
     monkeypatch.setattr(talking_avatar.subprocess,"run",lambda command,**kwargs: SimpleNamespace(stdout=json.dumps(video_data if Path(command[-1]).name=="out.mp4" else audio_data)))
