@@ -38,7 +38,7 @@ This downloads five unique footage clips, generates narration, subtitles, footag
 
 ## Production format
 
-AI PINTAR 2.0 uses a faceless format: footage, Indonesian AI narration, dynamic subtitles, cover and QC. Presenter overlays and talking-avatar/lip-sync generation are intentionally excluded from this production path.
+AI PINTAR 2.0 is strictly faceless: relevant footage, Indonesian AI narration, dynamic subtitles, cover and QC. Presenter, avatar and lip-sync features are cancelled and excluded from the build.
 
 Optional music must be supplied by the operator with rights to use it:
 
