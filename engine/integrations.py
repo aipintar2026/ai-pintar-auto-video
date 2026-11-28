@@ -141,10 +141,9 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
 
 
 def create_tts(text: str, output):
-    """Generate narration using the Edge TTS Python API; never relies on a CLI path."""
+    """Resilient Edge TTS: sentence-sized chunks, retries, voice fallback, and verified MP3 assembly."""
     if not text or not str(text).strip():
         raise ValueError("Teks TTS kosong.")
-    voice = os.getenv("TTS_VOICE", "id-ID-ArdiNeural")
     target = Path(output)
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -152,13 +151,69 @@ def create_tts(text: str, output):
     except ImportError as exc:
         raise RuntimeError("Paket edge-tts belum terpasang; install requirements.txt.") from exc
 
-    async def _save():
-        communicator = edge_tts.Communicate(text, voice)
-        await communicator.save(str(target))
+    primary = os.getenv("TTS_VOICE", "id-ID-ArdiNeural")
+    voices = list(dict.fromkeys([primary, "id-ID-GadisNeural", "id-ID-ArdiNeural"]))
+    # Build manageable chunks at sentence boundaries, then split long sentences by words.
+    sentences = re.split(r"(?<=[.!?])\\s+", str(text).strip())
+    chunks, current = [], ""
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if len(sentence) > 240:
+            pieces, piece = [], ""
+            for word in sentence.split():
+                if piece and len(piece)+len(word)+1 > 220:
+                    pieces.append(piece); piece=word
+                else:
+                    piece=(piece+" "+word).strip()
+            if piece: pieces.append(piece)
+        else:
+            pieces=[sentence]
+        for part in pieces:
+            if current and len(current)+len(part)+1>220:
+                chunks.append(current); current=part
+            else:
+                current=(current+" "+part).strip()
+    if current: chunks.append(current)
+    if not chunks: raise RuntimeError("Teks TTS kosong setelah pemecahan naskah.")
 
-    asyncio.run(_save())
-    if not target.exists() or target.stat().st_size < 10_000:
-        raise RuntimeError("Edge TTS tidak menghasilkan file audio yang valid.")
+    async def _synthesize():
+        produced=[]
+        for index, chunk in enumerate(chunks, 1):
+            temp=target.parent / f"{target.stem}_chunk_{index:03d}.mp3"
+            last_error=None
+            success=False
+            for voice in voices:
+                for attempt in range(1,4):
+                    try:
+                        communicator=edge_tts.Communicate(chunk, voice)
+                        await communicator.save(str(temp))
+                        if temp.exists() and temp.stat().st_size>=1500:
+                            success=True; break
+                        last_error=RuntimeError("Audio chunk kosong/terlalu kecil.")
+                    except Exception as exc:
+                        last_error=exc
+                    if attempt<3: await asyncio.sleep(2*attempt)
+                if success: break
+            if not success:
+                raise RuntimeError(f"Edge TTS gagal pada chunk {index}/{len(chunks)} setelah retry dan fallback voice: {last_error}")
+            produced.append(temp)
+        return produced
+
+    parts=asyncio.run(_synthesize())
+    # Concatenate MP3 segments through FFmpeg's concat demuxer, then validate output.
+    list_path=target.parent / f"{target.stem}_concat.txt"
+    list_path.write_text("".join(f"file '{p.name}'\\n" for p in parts),encoding="utf-8")
+    try:
+        subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",str(list_path),"-c","copy",str(target)],
+                       check=True,timeout=180,capture_output=True)
+    finally:
+        list_path.unlink(missing_ok=True)
+        for p in parts: p.unlink(missing_ok=True)
+    if not target.exists() or target.stat().st_size<10_000:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Edge TTS: hasil gabungan narration.mp3 tidak valid.")
     return str(target)
 
 
