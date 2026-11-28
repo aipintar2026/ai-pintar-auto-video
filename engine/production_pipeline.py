@@ -123,7 +123,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,DejaVu Sans,42,&H00FFFFFF,&H0000FFFF,&H00101010,&H90000000,1,0,0,0,100,100,0,0,1,4,2,2,90,90,340,1
+Style: Default,DejaVu Sans,34,&H00FFFFFF,&H0000FFFF,&H00101010,&H90000000,1,0,0,0,100,100,0,0,1,4,2,2,90,90,340,1
 
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
@@ -199,6 +199,7 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         clips, ids = [], []
         for scene_no, footage_query in enumerate(_scene_queries(topic, script, count=5), 1):
             scene_dir = work / f"scene_{scene_no:02d}"
+            scene_dir.mkdir(parents=True, exist_ok=True)
             scene_clips, scene_ids = pixabay_download(footage_query, key, scene_dir, used_ids=[*used_ids, *ids], count=1)
             clips.extend(scene_clips)
             ids.extend(scene_ids)
