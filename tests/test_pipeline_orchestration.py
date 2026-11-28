@@ -21,17 +21,16 @@ def test_pipeline_mocked_end_to_end_offline(tmp_path,monkeypatch):
     memory,state_path=_memory(tmp_path)
     monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
     monkeypatch.setattr(pipeline,"ROOT",tmp_path)
-    monkeypatch.setenv("PIXABAY_API_KEY","test-key")
     _patch_story(monkeypatch)
 
-    def fake_download(query,key,outdir,used_ids,count=5,cache_path=None):
+    def fake_visuals(topic,script,outdir,duration,count=5):
         clips=[]
         for i in range(count):
             clip=Path(outdir)/f"clip-{i}.mp4"
             clip.write_bytes(b"x"*100_000)
             clips.append(str(clip))
-        return clips,[str(i) for i in range(count)]
-    monkeypatch.setattr(pipeline,"pixabay_download",fake_download)
+        return clips
+    monkeypatch.setattr(pipeline,"generate_visual_clips",fake_visuals)
     monkeypatch.setattr(pipeline,"create_tts",lambda script,path:(Path(path).write_bytes(b"x"*20_000) or str(path)))
     monkeypatch.setattr(pipeline,"_duration",lambda path:35.0)
     # Synthetic mocked clips are byte placeholders; bypass media probing in orchestration unit test.
@@ -66,8 +65,8 @@ def test_pipeline_failure_releases_topic_for_recovery(tmp_path,monkeypatch):
     monkeypatch.setattr(pipeline,"ROOT",tmp_path)
     monkeypatch.setenv("PIXABAY_API_KEY","test-key")
     _patch_story(monkeypatch)
-    monkeypatch.setattr(pipeline,"pixabay_download",lambda *a,**k: (_ for _ in ()).throw(RuntimeError("simulated download failure")))
-    with pytest.raises(RuntimeError,match="simulated download failure"):
+    monkeypatch.setattr(pipeline,"generate_visual_clips",lambda *a,**k: (_ for _ in ()).throw(RuntimeError("simulated visual generation failure")))
+    with pytest.raises(RuntimeError,match="simulated visual generation failure"):
         pipeline.run_pipeline(outdir=tmp_path/"failed-output",publish=False)
     reopened=TopicMemory(tmp_path/"topics.json",state_path)
     assert "topic-a" not in reopened.state["used_ids"]
