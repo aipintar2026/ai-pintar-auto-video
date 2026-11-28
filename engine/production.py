@@ -10,10 +10,10 @@ def make_story(topic):
     title=topic['title']; angle=topic.get('angle','')
     return Story(
       hook=f"Pernah bingung menggunakan AI untuk {title.lower()}?",
-      problem="Banyak orang langsung mengetik perintah singkat, lalu kecewa karena hasilnya terlalu umum atau tidak sesuai kebutuhan.",
-      solution=f"Coba jelaskan tujuan, konteks, dan format hasil yang kamu inginkan. Untuk topik ini, fokusnya adalah {angle.lower()}. Berikan contoh, batasan, dan minta AI menyusun langkah yang mudah diikuti. Setelah itu, periksa kembali hasilnya sebelum digunakan.",
-      extra="Jika jawaban pertama belum tepat, jangan langsung menyerah. Perbaiki prompt secara bertahap dan bandingkan hasilnya. AI adalah alat bantu, bukan pengganti pemeriksaan manusia.",
-      cta="Simpan tips ini dan ikuti AI PINTAR untuk belajar AI secara praktis."
+      problem="Prompt terlalu singkat sering membuat jawaban AI kurang tepat.",
+      solution=f"Jelaskan tujuan dan konteks, lalu tentukan format jawaban. Fokus kita: {angle.lower()}. Berikan satu contoh dan batasan agar AI memahami kebutuhanmu. Periksa hasilnya sebelum dipakai.",
+      extra="Jika hasil belum sesuai, ubah instruksi sedikit demi sedikit. AI tetap perlu diperiksa.",
+      cta="Simpan tips ini dan ikuti AI PINTAR."
     )
 
 def render_demo(topic, story, out):
