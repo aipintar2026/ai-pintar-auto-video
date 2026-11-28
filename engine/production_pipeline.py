@@ -25,7 +25,7 @@ def _escape_filter_path(path):
     return str(path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace(",", "\\,")
 
 
-def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
+def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30):
     if not clips:
         raise ValueError("Render membutuhkan minimal satu footage.")
     duration = _duration(narration)
@@ -36,19 +36,9 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
         inputs += ["-stream_loop", "-1", "-i", str(clip)]
     narration_index=len(clips)
     inputs += ["-i", str(narration)]
-    avatar_index=None
-    avatar_kind=None
-    if avatar and Path(avatar).exists():
-        avatar_path=Path(avatar)
-        avatar_kind="video" if avatar_path.suffix.lower() in {".mp4", ".mov", ".mkv", ".webm"} else "image"
-        if avatar_kind == "image":
-            inputs += ["-loop", "1", "-i", str(avatar_path)]
-        else:
-            inputs += ["-stream_loop", "-1", "-i", str(avatar_path)]
-        avatar_index=narration_index+1
     music_index=None
     if music and Path(music).exists():
-        music_index=len(clips)+(2 if avatar_index is not None else 1)
+        music_index=narration_index+1
         inputs += ["-stream_loop", "-1", "-i", str(music)]
     segment=duration/len(clips)
     filters=[]
@@ -59,15 +49,7 @@ def ffmpeg_render(clips, narration, subtitles, avatar, out, music=None, fps=30):
     render_subtitles=ass_path if ass_path.exists() else Path(subtitles)
     sub_path=_escape_filter_path(render_subtitles)
     filters.append(f"[bg]subtitles='{sub_path}'[sub]")
-    if avatar_index is not None:
-        if avatar_kind == "video":
-            filters.append(f"[{avatar_index}:v]scale=280:-2,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS,chromakey=0x00ff00:0.25:0.08[avatar]")
-        else:
-            filters.append(f"[{avatar_index}:v]scale=280:-2,trim=duration={duration:.6f},chromakey=0x00ff00:0.25:0.08[avatar]")
-        filters.append("[sub][avatar]overlay=W-w-56:120:eof_action=repeat[vout]")
-        video_label="vout"
-    else:
-        video_label="sub"
+    video_label="sub"
     if music_index is not None:
         filters.append(f"[{narration_index}:a]aformat=sample_rates=48000:channel_layouts=stereo[voice]")
         filters.append(f"[{music_index}:a]volume=0.12,atrim=duration={duration:.6f},aformat=sample_rates=48000:channel_layouts=stereo[music]")
@@ -168,7 +150,7 @@ def _save_media_ids(path, ids):
     tmp.replace(path)
 
 
-def run_pipeline(outdir='output_production', publish=False, avatar=None, channel_ids=None, upload_cloudinary=False, music=None):
+def run_pipeline(outdir='output_production', publish=False, channel_ids=None, upload_cloudinary=False, music=None):
     if publish and not check_publish_allowed():
         raise RuntimeError('Publish Guard: PUBLISH_ENABLED=true dan PUBLISH_DRY_RUN=false harus diset secara eksplisit.')
     if publish and not channel_ids:
@@ -192,8 +174,8 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
         dur=_duration(audio)
         caption=caption_and_srt(topic,script,dur,out)
 
-        # Faceless format: footage, narration and subtitles only; no presenter overlay.
-        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',None,vid,music=music)
+        # Faceless format: footage, narration, dynamic subtitles and optional licensed music.
+        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',vid,music=music)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
         manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],
