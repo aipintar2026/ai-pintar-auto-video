@@ -65,7 +65,7 @@ def test_generated_visuals_split_sentences_and_clean_whitespace():
     from engine.generated_visuals import _clean
     import re
     from engine.generated_visuals import _scene_kind
-    assert _clean("  prompt   AI\\n  praktis ") == "prompt AI praktis"
+    assert _clean("  prompt   AI\n  praktis ") == "prompt AI praktis"
     sentences=[x.strip() for x in re.split(r"(?<=[.!?])\\s+","Prompt AI. Cara menulis caption.") if x.strip()]
     assert sentences == ["Prompt AI.","Cara menulis caption."]
     assert _scene_kind({"title":"Cara membuat prompt","category":"AI"},"prompt")=="prompt"
