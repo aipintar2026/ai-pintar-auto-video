@@ -12,7 +12,7 @@ def make_story(topic):
       hook=f"Pernah bingung menggunakan AI untuk {title.lower()}?",
       problem="Prompt yang singkat sering menghasilkan jawaban terlalu umum atau meleset. Jangan langsung menerima hasil pertama; periksa apakah jawaban sesuai kebutuhan.",
       solution=f"Jelaskan tujuan, konteks, dan format yang diinginkan. Fokus: {angle.lower()}. Berikan contoh serta batasan, lalu minta langkah terstruktur jika perlu. Periksa fakta dan sesuaikan hasilnya sebelum digunakan.",
-      extra="Jika belum sesuai, tambahkan detail atau contoh dan perjelas instruksi. AI membantu pekerjaan, tetapi pemeriksaan akhir tetap dilakukan manusia.",
+      extra="Jika belum sesuai, tambahkan detail atau contoh dan perjelas instruksi. AI membantu pekerjaan, tetapi pemeriksaan akhir tetap dilakukan manusia. Catat langkah yang berhasil, gunakan ulang pola instruksi, dan jangan memasukkan data pribadi atau rahasia ke dalam prompt.",
       cta="Simpan tips ini dan ikuti AI PINTAR."
     )
 
