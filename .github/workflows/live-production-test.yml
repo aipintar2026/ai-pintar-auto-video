@@ -33,17 +33,15 @@ jobs:
           python -m pip install pip==24.3.1
           pip install --require-hashes -r requirements.lock
 
-      - name: Run REAL Pixabay + Edge TTS + render + QC (publishing disabled)
+      - name: Run live Edge TTS + local visual generation + render + QC (publishing disabled)
         env:
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           TTS_VOICE: id-ID-ArdiNeural
           PUBLISH_ENABLED: "false"
           PUBLISH_DRY_RUN: "true"
         run: |
-          if [ -z "$PIXABAY_API_KEY" ]; then echo "Missing repository secret PIXABAY_API_KEY"; exit 1; fi
           python run_production.py --output output_live_test
 
-      - name: Upload real production test artifacts
+      - name: Upload live production test artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: AI-PINTAR-2-LIVE-TEST
