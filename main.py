@@ -146,91 +146,72 @@ def make_overlay(number, heading, subtitle, path):
     im.save(path)
 
 def pixabay_video(api_key, query, destination, used_ids):
-    """Unduh klip Pixabay yang belum dipakai; coba beberapa hasil dan retry jaringan."""
-    params = urllib.parse.urlencode({
-        "key": api_key,
-        "q": query,
-        "per_page": 50,
-        "video_type": "film",
-        "safesearch": "true"
-    })
-    url = API_URL + "?" + params
-    last_error = None
-
-    for attempt in range(1, 4):
+    """Search, rank semantic candidates by metadata, and reject weak matches."""
+    import re
+    def tokens(text):
+        return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w)>2}
+    query_tokens=tokens(query)
+    # Scene search is diversified: exact query first, then query-token variants.
+    searches=[query]
+    words=list(query_tokens)
+    if len(words)>=2:
+        searches.append(" ".join(words[:3]))
+        searches.append(" ".join(words[-3:]))
+    searches=list(dict.fromkeys(searches))
+    last_error=None
+    for attempt in range(1,4):
         try:
-            request = urllib.request.Request(
-                url, headers={"User-Agent": "AI-PINTAR-Video/1.0"}
-            )
-            with urllib.request.urlopen(request, timeout=45) as response:
-                data = json.loads(response.read().decode("utf-8"))
-
-            hits = data.get("hits", [])
-            candidates = [
-                hit for hit in hits
-                if str(hit.get("id", "")) not in used_ids
-                and any(
-                    hit.get("videos", {}).get(size, {}).get("url")
-                    for size in ("medium", "large", "small")
-                )
-            ]
-            random.shuffle(candidates)
-
-            for hit in candidates:
-                formats = hit.get("videos", {})
-                selected = (
-                    formats.get("medium")
-                    or formats.get("large")
-                    or formats.get("small")
-                )
-                if not selected or not selected.get("url"):
-                    continue
-
-                video_request = urllib.request.Request(
-                    selected["url"], headers={"User-Agent": "Mozilla/5.0"}
-                )
-                try:
-                    with urllib.request.urlopen(video_request, timeout=90) as response:
-                        video_data = response.read()
-                except Exception as download_error:
-                    print(f"Footage ID {hit.get('id')} gagal diunduh; mencoba hasil lain.")
-                    last_error = download_error
-                    continue
-
-                if len(video_data) > 100_000:
-                    Path(destination).write_bytes(video_data)
-                    clip_id = str(hit.get("id", ""))
-                    if clip_id:
-                        used_ids.add(clip_id)
-                    print(f"FOOTAGE TERPILIH: ID {clip_id or 'tidak tersedia'}")
-                    return clip_id
-
+            ranked=[]
+            seen=set()
+            for search_query in searches:
+                params=urllib.parse.urlencode({"key":api_key,"q":search_query,"per_page":50,"video_type":"film","safesearch":"true"})
+                request=urllib.request.Request(API_URL+"?"+params,headers={"User-Agent":"AI-PINTAR-Video/2.0"})
+                with urllib.request.urlopen(request,timeout=45) as response:
+                    data=json.loads(response.read().decode("utf-8"))
+                for hit in data.get("hits",[]):
+                    hid=str(hit.get("id",""))
+                    if not hid or hid in used_ids or hid in seen: continue
+                    seen.add(hid)
+                    formats=hit.get("videos",{})
+                    if not any(formats.get(s,{}).get("url") for s in ("medium","large","small")): continue
+                    meta=" ".join([str(hit.get("tags","")),str(hit.get("user",""))])
+                    mt=tokens(meta)
+                    overlap=len(query_tokens & mt)
+                    score=overlap/(max(1,len(query_tokens))) 
+                    # Exact query search results receive a small relevance bonus.
+                    if search_query==query: score+=0.15
+                    ranked.append((score,hit))
+            ranked.sort(key=lambda item:(item[0],random.random()),reverse=True)
+            # Avoid blindly accepting random low-relevance clips.
+            candidates=[hit for score,hit in ranked if score>=0.12]
             if not candidates:
-                raise RuntimeError(
-                    f"Tidak ditemukan footage baru untuk '{query}' yang belum pernah dipakai. "
-                    "Riwayat klip tetap dipertahankan agar tidak mengulang footage."
-                )
-            raise RuntimeError(
-                f"Semua footage yang ditemukan gagal diunduh untuk pencarian: {query}"
-            )
-
+                raise RuntimeError("QC footage relevance: no candidates passed metadata relevance threshold for query '"+query+"'")
+            for score,hit in candidates:
+                formats=hit.get("videos",{})
+                selected=formats.get("medium") or formats.get("large") or formats.get("small")
+                if not selected or not selected.get("url"): continue
+                video_request=urllib.request.Request(selected["url"],headers={"User-Agent":"Mozilla/5.0"})
+                try:
+                    with urllib.request.urlopen(video_request,timeout=90) as response: video_data=response.read()
+                except Exception as download_error:
+                    last_error=download_error; continue
+                if len(video_data)>100_000:
+                    Path(destination).write_bytes(video_data)
+                    clip_id=str(hit.get("id",""))
+                    if clip_id: used_ids.add(clip_id)
+                    print(f"FOOTAGE TERPILIH: ID {clip_id} | skor relevansi {score:.2f} | query '{query}'")
+                    return clip_id
+            raise RuntimeError("Kandidat footage relevan gagal diunduh untuk query: "+query)
         except urllib.error.HTTPError as error:
-            detail = error.read().decode("utf-8", errors="replace")
-            print(f"PIXABAY HTTP ERROR: {error.code}")
-            print(f"PIXABAY DETAIL: {detail[:1000]}")
-            if error.code not in (429, 500, 502, 503, 504):
-                raise RuntimeError(
-                    f"Pixabay menolak permintaan (HTTP {error.code})."
-                ) from error
-            last_error = error
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
-            print(f"PIXABAY CONNECTION ERROR percobaan {attempt}/3: {error}")
-            last_error = error
-
-        if attempt < 3:
-            time.sleep(attempt * 4)
-
-    raise RuntimeError(f"Pixabay gagal setelah 3 percobaan: {last_error}")
+            detail=error.read().decode("utf-8",errors="replace")
+            print(f"PIXABAY HTTP ERROR: {error.code} | {detail[:500]}")
+            if error.code not in (429,500,502,503,504): raise RuntimeError(f"Pixabay HTTP {error.code}") from error
+            last_error=error
+        except (urllib.error.URLError,TimeoutError,ConnectionError,RuntimeError) as error:
+            print(f"PIXABAY/RELEVANCE ERROR attempt {attempt}/3: {error}")
+            last_error=error
+        if attempt<3: time.sleep(attempt*4)
+    raise RuntimeError(f"Pixabay/relevance search failed after retries: {last_error}")
 
 
 
@@ -379,11 +360,14 @@ def main():
 
     clips = []
     for i, ((heading, subtitle), query) in enumerate(zip(topic["scenes"], topic["queries"]), start=1):
+        # Scene query is strengthened with its actual heading/subtitle to anchor meaning.
+        scene_query = " ".join([query, heading, subtitle])
+        scene_query = " ".join(scene_query.split())
         raw = work_dir / f"pixabay_{i}.mp4"
         overlay = work_dir / f"overlay_{i}.png"
         rendered = work_dir / f"scene_{i}.mp4"
-        print(f"Mengambil footage {i}/5: {query}")
-        pixabay_video(api_key, query, raw, used_ids)
+        print(f"Mengambil footage {i}/5: {scene_query}")
+        pixabay_video(api_key, scene_query, raw, used_ids)
         make_overlay(i, heading, subtitle, overlay)
         run_cmd([
             "ffmpeg", "-y", "-stream_loop", "-1", "-i", str(raw), "-loop", "1", "-i", str(overlay),
