@@ -34,6 +34,8 @@ def test_pipeline_mocked_end_to_end_offline(tmp_path,monkeypatch):
     monkeypatch.setattr(pipeline,"pixabay_download",fake_download)
     monkeypatch.setattr(pipeline,"create_tts",lambda script,path:(Path(path).write_bytes(b"x"*20_000) or str(path)))
     monkeypatch.setattr(pipeline,"_duration",lambda path:35.0)
+    # Synthetic mocked clips are byte placeholders; bypass media probing in orchestration unit test.
+    monkeypatch.setattr(pipeline,"_validate_footage",lambda clips:[{"file":Path(x).name,"resolution":"1080x1920","duration":35.0} for x in clips])
     def fake_render(clips,narration,subtitles,out,music=None):
         Path(out).write_bytes(b"x"*200_000)
         return out
