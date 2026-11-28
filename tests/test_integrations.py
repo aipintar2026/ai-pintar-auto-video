@@ -113,6 +113,10 @@ def test_tts_uses_python_module(tmp_path, monkeypatch):
     fake.Communicate=Communicate
     monkeypatch.setitem(sys.modules,'edge_tts',fake)
     target=tmp_path/'audio.mp3'
+    def fake_ffmpeg(cmd, **kwargs):
+        Path(cmd[-1]).write_bytes(b"x"*20000)
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(integrations.subprocess,"run",fake_ffmpeg)
     assert integrations.create_tts('hello',target)==str(target)
     assert target.stat().st_size==20000
 
