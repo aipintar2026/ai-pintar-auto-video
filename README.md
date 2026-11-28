@@ -38,7 +38,7 @@ This downloads five unique footage clips, generates narration, subtitles, footag
 
 ## Production format
 
-AI PINTAR 2.0 is strictly faceless: relevant footage, Indonesian AI narration, dynamic subtitles, cover and QC. Presenter, avatar and lip-sync features are cancelled and excluded from the build.
+The current staging renderer remains a faceless proof-of-pipeline and does not yet satisfy the intended visual target. The revised target is a consistent stylized 3D presenter with narration-synchronized lip movement, natural gestures, topic-relevant motion footage, subtitles, cover and QC. See `docs/VISUAL_PRODUCTION_TARGET.md` for scope and acceptance gates. The talking-avatar engine is **not yet integrated or validated**; prompt packs alone are not a rendered presenter.
 
 Optional music must be supplied by the operator with rights to use it:
 
