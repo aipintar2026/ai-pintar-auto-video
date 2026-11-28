@@ -12,9 +12,15 @@ def _headers(key):
 
 def _check(response, step):
     if not response.ok:
-        # Preserve provider diagnostics while never printing credentials.
-        detail = response.text[:1200].replace("\\n", " ")
-        raise RuntimeError(f"D-ID {step} HTTP {response.status}: {detail}")
+        # Provider diagnostics are useful for troubleshooting; never include request headers.
+        try:
+            payload = response.json()
+            detail = str(payload)[:1800]
+        except Exception:
+            detail = response.text[:1800]
+        request_id = response.headers.get("x-request-id") or response.headers.get("request-id")
+        suffix = f" (request_id={request_id})" if request_id else ""
+        raise RuntimeError(f"D-ID {step} HTTP {response.status}{suffix}: {detail}")
     return response
 
 
@@ -38,7 +44,10 @@ def create_avatar_video(audio_path, output, source_url=None, api_key=None, timeo
         r = requests.post(API + "/audios", headers=_headers(key),
                          files={"audio": (audio.name, fh, "audio/mpeg")}, timeout=60)
     _check(r, "upload audio")
-    audio_data = r.json()
+    try:
+        audio_data = r.json()
+    except ValueError as exc:
+        raise RuntimeError(f"D-ID upload audio: respons bukan JSON (HTTP {r.status_code}).") from exc
     audio_url = audio_data.get("url") or audio_data.get("audio_url")
     if not audio_url:
         raise RuntimeError(f"D-ID upload audio: respons tidak berisi URL audio (keys={list(audio_data.keys())}).")
@@ -48,7 +57,10 @@ def create_avatar_video(audio_path, output, source_url=None, api_key=None, timeo
     r = requests.post(API + "/talks", headers={**_headers(key), "content-type": "application/json"},
                       json=payload, timeout=60)
     _check(r, "create talk")
-    job = r.json()
+    try:
+        job = r.json()
+    except ValueError as exc:
+        raise RuntimeError(f"D-ID create talk: respons bukan JSON (HTTP {r.status_code}).") from exc
     talk_id = job.get("id")
     if not talk_id:
         raise RuntimeError(f"D-ID create talk: respons tidak berisi job ID (keys={list(job.keys())}).")
@@ -57,7 +69,10 @@ def create_avatar_video(audio_path, output, source_url=None, api_key=None, timeo
     while time.monotonic() < deadline:
         check = requests.get(API + "/talks/" + talk_id, headers=_headers(key), timeout=30)
         _check(check, "poll talk")
-        data = check.json()
+        try:
+            data = check.json()
+        except ValueError as exc:
+            raise RuntimeError("D-ID poll talk: respons bukan JSON.") from exc
         status = data.get("status")
         if status == "done":
             url = data.get("result_url")
@@ -77,6 +92,7 @@ def create_avatar_video(audio_path, output, source_url=None, api_key=None, timeo
             return {"provider": "D-ID", "talk_id": talk_id, "status": "done",
                     "video": str(target), "bytes": target.stat().st_size}
         if status in ("error", "rejected"):
-            raise RuntimeError("D-ID talk gagal: " + str(data.get("error") or status))
+            error_detail = data.get("error") or data.get("message") or status
+            raise RuntimeError("D-ID talk gagal: " + str(error_detail)[:1500])
         time.sleep(8)
     raise TimeoutError(f"D-ID processing timeout untuk talk {talk_id}; cek job di dashboard sebelum retry.")
