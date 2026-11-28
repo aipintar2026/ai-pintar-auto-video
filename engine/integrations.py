@@ -204,7 +204,7 @@ def create_tts(text: str, output):
     parts=asyncio.run(_synthesize())
     # Concatenate MP3 segments through FFmpeg's concat demuxer, then validate output.
     list_path=target.parent / f"{target.stem}_concat.txt"
-    list_path.write_text("".join(f"file '{p.name}'\\n" for p in parts),encoding="utf-8")
+    list_path.write_text("".join(f"file '{p.resolve()}'\\n" for p in parts),encoding="utf-8")
     try:
         subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",str(list_path),"-c","copy",str(target)],
                        check=True,timeout=180,capture_output=True)
