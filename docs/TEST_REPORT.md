@@ -1,20 +1,23 @@
 # AI PINTAR 2.0 Staging Test Report
 
-This report is historical and must not be treated as evidence of the current faceless branch validation. The previously documented test run predates the latest faceless refactor.
+## Active scope
+Faceless production only: footage, Indonesian narration, dynamic subtitles, cover, render and QC. Talking-avatar, lip-sync, presenter generator and overlays are cancelled and removed.
 
-## Current scope
-The staging pipeline format is faceless: footage, narration, subtitles, cover and QC. Presenter, talking-avatar and lip-sync features are cancelled.
+## Latest verified offline CI before this cleanup
+- Run #139: https://github.com/aipintar2026/ai-pintar-auto-video/actions/runs/46108317551
+- Head commit: `8b5865e6c1db17ef87d6a0435cc440f5d929f31c`
+- Compile step passed; hash-lock verification/install passed; **47 tests passed**; synthetic render and artifact upload passed.
+- Artifact: `AI-PINTAR-STAGING-OFFLINE`, ID `15248581018`, digest `sha256:f57522f5335da23f069ce9e7172f3179be0bff7c3b9d5549a8301691f2f05b54`, expires 5 December 2026.
+- Artifact: https://github.com/aipintar2026/ai-pintar-auto-video/actions/runs/46108317551/artifacts/15248581018
 
-## Validation status
-A fresh CI run is required after the latest changes. Do not mark the project complete until CI, synthetic rendering, cover/subtitle QC and artifact verification pass.
+This evidence predates the avatar cleanup in this PR. A fresh CI run is required to validate the new commit.
 
-## External validation pending
-- Live Pixabay access/download
-- Live Edge TTS execution
-- Cloudinary upload
-- Buffer channel/API validation (without publication)
-- Human visual review of video, subtitle, cover and footage/title alignment
-- Durable state/reconciliation across ephemeral runners
+## Pending validation
+- Live Pixabay download and Edge TTS.
+- Full real-media faceless render and visual review.
+- Cloudinary account/upload validation.
+- Buffer channel/API validation without publication.
+- Durable topic/media state and publish reconciliation across ephemeral runners.
 
 ## Safety boundary
-PR #3 remains staging-only, open/draft/unmerged. No merge, production workflow changes or publishing were performed. The production workflow on main remains untouched.
+PR #3 targets `ai-pintar-2-staging`, remains open/draft/unmerged. No merge, publication, production schedule or configuration changes were made.
