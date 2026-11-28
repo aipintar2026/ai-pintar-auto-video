@@ -185,8 +185,8 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
         media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
         used_ids=_load_media_ids(media_ids_path)
         clips,ids=pixabay_download(topic.get('angle') or topic['title'],key,work,used_ids=used_ids,count=5)
-        if len(clips) < 5:
-            raise RuntimeError(f'QC: dibutuhkan 5 footage berbeda, hanya {len(clips)} tersedia.')
+        if len(clips) < 3:
+            raise RuntimeError(f'QC: minimal 3 footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
         (out/'pixabay_ids.json').write_text(json.dumps(ids,indent=2),encoding='utf-8')
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
