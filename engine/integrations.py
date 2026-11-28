@@ -70,7 +70,21 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
         temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
         temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
         temp_cache.replace(cache_path)
-    chosen = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)][:count]
+    # Rank search results by tag relevance and usable source quality instead of
+    # taking the API's first hits blindly. This remains heuristic, not semantic QC.
+    query_tokens = {t.lower() for t in re.findall(r"[\\w-]+", normalized_query) if len(t) > 2}
+    def _score(hit):
+        tags = {t.lower() for t in re.findall(r"[\\w-]+", str(hit.get("tags", "")))}
+        relevance = len(query_tokens & tags) / max(1, len(query_tokens))
+        videos = hit.get("videos") or {}
+        best = videos.get("large") or videos.get("medium") or videos.get("small") or videos.get("tiny") or {}
+        width = int(best.get("width") or 0); height = int(best.get("height") or 0)
+        duration = int(hit.get("duration") or 0)
+        quality = min(width / 1080, 1.0) if width else 0.0
+        length_bonus = 0.1 if duration >= 8 else 0.0
+        return relevance * 3.0 + quality + length_bonus
+    eligible = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)]
+    chosen = sorted(eligible, key=_score, reverse=True)[:count]
     if len(chosen) < count:
         # A smaller set is allowed only if at least one usable result is found.
         if not chosen:
