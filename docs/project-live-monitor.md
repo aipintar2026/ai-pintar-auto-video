@@ -1,66 +1,55 @@
 # AI PINTAR 2.0 — Project Live Monitor
 
-> Static snapshot; percentages are evidence-based milestone estimates, not runtime telemetry. Untested or external-dependent items are not counted as completed.
+> Static snapshot as of 28 November 2026. Milestone percentages are estimates, not telemetry.
 
-## Snapshot — 27 November 2026
+## Active scope: faceless video production
 
 | Workstream | Estimate | Status | Verified basis / remaining |
 |---|---:|---|---|
-| Staging CI & safety | 100% of offline scope | GREEN | Run #110 compile, 51 tests, hash-lock install, synthetic render, QC and artifact upload passed. Not live integration validation. |
-| Subtitle / visual QC | 85% | YELLOW | SRT/ASS structural, dwell-time, CPS, style/safe-zone tests and cover structural QC passed. Semantic footage alignment and human visual review pending. |
-| Core production pipeline | 80% | YELLOW | Offline render exercises generated master presenter, chromakey overlay, subtitles, cover and manifest. Live providers and durable state pending. |
-| Provider integrations | 45% | YELLOW | Mocked provider paths tested; live Pixabay, TTS, Cloudinary and Buffer validation pending. |
-| Talking-avatar | 45% | RED / BLOCKED | Adapter wired into pipeline when configured and mock-tested; engine selection and real lip-sync remain pending. |
-| Presenter master | 100% of internal generator milestone | GREEN | Deterministic master-presenter generator is in the repair branch and exercised in the offline render. Human visual acceptance and external talking-avatar engine remain separate. |
-| Production hardening | 30% | YELLOW / RED | Staging dependency lock with hashes is verified. Durable state/reconciliation across ephemeral runners and production workflow review remain unverified. |
+| Staging CI & safety | 100% of offline scope | GREEN | Run #139 compile, hash-lock install, 47 tests, synthetic render and artifact upload passed. Cleanup commit still needs CI. |
+| Subtitle / cover QC | 85% | YELLOW | SRT/ASS readability, dwell/CPS, parity and cover structural safe-zone tests. Human semantic review pending. |
+| Core faceless pipeline | 80% | YELLOW | Offline render, narration/subtitle/render/cover/QC orchestration exercised. Live media and durable state pending. |
+| Provider integrations | 45% | YELLOW | Mocked paths tested. Live Pixabay/TTS, Cloudinary and Buffer validation pending. |
+| Production hardening | 30% | YELLOW / RED | Hash lock and safety guard tested. Durable state, production workflow review and rollback plan pending. |
 
 ## Weighted estimate
 
-Weights: staging safety 25%, subtitle/visual QC 20%, pipeline 20%, integrations 15%, talking-avatar 10%, master asset 5%, production hardening 5%.
+Weights: CI/safety 25%, subtitle/cover QC 20%, faceless pipeline 20%, provider integration 15%, hardening/migration 20%.
 
-Calculation: 25 + 17 + 16 + 6.75 + 4.5 + 5 + 1.5 = **75.75% (about 76%)**.
+`25 + 17 + 16 + 6.75 + 6 = 70.75%` — **about 71%**.
 
-The score rose from 63.75% because presenter generation, cover/QC, pipeline wiring, subtitle timing and hashed dependency lock are new verified milestones. Repeated CI runs alone do not increase progress.
+The estimate excludes the cancelled presenter/avatar feature. Repeated CI runs alone do not increase progress.
 
-## Latest verified staging evidence
+## Latest verified offline evidence (before this cleanup)
 
-- Run #110: https://github.com/aipintar2026/ai-pintar-auto-video/actions/runs/45937716274
-- Commit: `bc491076445c9fc233518d76b57295b4cffffcb2`
-- 51 tests passed, 0 failed; compilation passed; hash-lock regeneration/diff/install passed; synthetic offline render and artifact upload passed.
-- Artifact ID: `15171790401`; ZIP SHA-256: `a1a88ab4688f9c6706ca92ff9237a12b13506fb93aadc402086224f7471da115`.
-- Render: 35 seconds, 1080×1920, H.264/AAC, 14 subtitle cues.
-- Subtitle QC: maximum CPS 19.2; minimum cue duration 0.564 seconds; ASS 14/14 cues, lower-center, font 34, margin 300.
-- Cover QC: 1080×1920, 2 title lines, structural safe-zone PASS; semantic match and human visual review are not automated.
-- Dependency lock: pip/pip-tools pinned for lock generation; committed lock regenerated with no diff and installed using hashes.
-- External calls and publication: none.
+- Run #139: https://github.com/aipintar2026/ai-pintar-auto-video/actions/runs/46108317551
+- Head: `8b5865e6c1db17ef87d6a0435cc440f5d929f31c`
+- 47 tests passed; compile, hashed dependency verification/install, synthetic render and artifact upload passed.
+- Artifact ID: `15248581018`; SHA-256: `f57522f5335da23f069ce9e7172f3179be0bff7c3b9d5549a8301691f2f05b54`.
+- The evidence above is historical and does not validate the avatar cleanup commit.
 
-## Changes verified
+## Changes in this cleanup
+- Remove presenter/avatar/lip-sync engine and experimental runner.
+- Remove avatar input/overlay path from the staging render API.
+- Remove presenter/avatar arguments from the production CLI and offline render.
+- Align plan, report and monitor with the faceless-only scope.
 
-- Deterministic master-presenter generator; static chromakey overlay tested.
-- Talking-avatar adapter wired as an opt-in pipeline path.
-- Automatic cover generation and structural QC.
-- Subtitle minimum dwell-time allocation and CPS validation.
-- Hash-locked dependencies and CI lock freshness verification.
-- Offline artifact includes video, caption, SRT/ASS, manifest, cover and presenter master.
+## Pending blockers
 
-## Safe boundaries and blockers
+- Live Pixabay and TTS/render/QC run.
+- Human semantic review of footage, title, subtitles and cover.
+- Cloudinary controlled upload.
+- Buffer channel validation/reconciliation without publication.
+- Durable state across ephemeral runners and separate production workflow review/approval.
 
-- PR #3 targets `ai-pintar-2-staging`, remains draft/open/unmerged.
-- Staging workflow is offline-only; no post is queued or published.
-- `main`, production schedule and publishing configuration remain untouched.
-- The production workflow on `main` may queue content independently; this repair does not disable it.
-- Pending: human visual/semantic review, talking-avatar engine and lip-sync, live provider validation, durable state/reconciliation across ephemeral runners and production workflow review/approval.
+## Safety
 
-## Next concrete actions
+PR #3 remains staging-only, open/draft/unmerged. No publishing steps are in the staging CI; production configuration and schedule remain untouched.
 
-1. Human review of generated presenter, cover and footage/subtitle alignment.
-2. Select and validate a talking-avatar engine and short lip-sync sample.
-3. Design durable publish state/reconciliation for uncertain partial outcomes.
-4. Conduct controlled live-provider checks without publishing.
-5. Review the production workflow separately before any migration or approval.
+## Next
 
-## Status legend
-
-- GREEN: milestone passed within the stated test scope.
-- YELLOW: incomplete or awaiting validation.
-- RED: blocker or required evidence/input missing.
+1. Fresh CI after cleanup.
+2. Live faceless render with provider credentials.
+3. Human visual review.
+4. Controlled Cloudinary and Buffer checks.
+5. Production migration review only after evidence and explicit approval.
