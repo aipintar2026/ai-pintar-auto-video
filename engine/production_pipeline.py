@@ -201,8 +201,6 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
     if publish and not channel_ids:
         raise RuntimeError('Publish Guard: channel IDs wajib diisi sebelum publikasi.')
     out=Path(outdir);out.mkdir(parents=True,exist_ok=True);work=out/'media';work.mkdir(exist_ok=True)
-    key=os.environ.get('PIXABAY_API_KEY')
-    if not key: raise RuntimeError('PIXABAY_API_KEY belum diset.')
     mem=TopicMemory(); selected=mem.choose()
     if selected.get('bank_exhausted'): return selected
     topic=selected['topic']; topic_id=topic['id']
@@ -226,7 +224,6 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
         (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
-        _save_media_ids(media_ids_path,ids)
         if upload_cloudinary:
             cloud=cloudinary_upload(vid,public_id=f"staging_{topic_id}_{hashlib.sha256(vid.read_bytes()).hexdigest()[:8]}")
             manifest['cloudinary_result']=cloud
