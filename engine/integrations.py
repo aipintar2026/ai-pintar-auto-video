@@ -44,10 +44,8 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
     normalized_query = re.sub(r"\s+", " ", normalized_query).strip()[:80]
     if not normalized_query:
         raise ValueError("Query Pixabay tidak valid setelah normalisasi.")
-    params = {"key": key, "q": normalized_query, "per_page": 30}
     cache_path = Path(cache_path) if cache_path else Path(outdir).parent.parent / "state" / "pixabay_search_cache.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_key = hashlib.sha256(("|" + str(params["q"]).lower().strip()).encode()).hexdigest()
     cache = {}
     if cache_path.exists():
         try:
@@ -55,21 +53,29 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
             if not isinstance(cache, dict): raise ValueError("Cache bukan object.")
         except (OSError, json.JSONDecodeError, ValueError):
             raise RuntimeError("Cache Pixabay rusak; jangan hapus otomatis, periksa state/pixabay_search_cache.json.")
-    entry = cache.get(cache_key)
-    if entry and (time.time() - float(entry.get("fetched_at", 0))) < 24 * 60 * 60:
-        hits = entry.get("hits") or []
-    else:
-        response = requests.get(PIXABAY_URL, params=params, timeout=30)
-        if getattr(response, "status_code", 200) == 400:
-            # Retry once with a shorter, minimal query.
-            fallback_params = {"key": key, "q": " ".join(normalized_query.split()[:3])}
-            response = requests.get(PIXABAY_URL, params=fallback_params, timeout=30)
-        response.raise_for_status()
-        hits = response.json().get("hits") or []
-        cache[cache_key] = {"query": params["q"], "fetched_at": time.time(), "hits": hits}
-        temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
-        temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
-        temp_cache.replace(cache_path)
+
+    # Try the full scene phrase, a shorter phrase, then broad fallback terms.
+    tokens = normalized_query.split()
+    queries = [normalized_query, " ".join(tokens[:4]), " ".join(tokens[:2]), "technology", "computer"]
+    unique_queries = list(dict.fromkeys(q for q in queries if q))
+    hits = []
+    for search_q in unique_queries:
+        params = {"key": key, "q": search_q, "per_page": 30}
+        cache_key = hashlib.sha256(("|" + search_q.lower().strip()).encode()).hexdigest()
+        entry = cache.get(cache_key)
+        if entry and (time.time() - float(entry.get("fetched_at", 0))) < 24 * 60 * 60:
+            candidate_hits = entry.get("hits") or []
+        else:
+            response = requests.get(PIXABAY_URL, params=params, timeout=30)
+            response.raise_for_status()
+            candidate_hits = response.json().get("hits") or []
+            cache[cache_key] = {"query": search_q, "fetched_at": time.time(), "hits": candidate_hits}
+            temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
+            temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+            temp_cache.replace(cache_path)
+        if candidate_hits:
+            hits = candidate_hits
+            break
     # Rank search results by tag relevance and usable source quality instead of
     # taking the API's first hits blindly. This remains heuristic, not semantic QC.
     # Normalize tokenization consistently; prioritize semantic tag overlap and usable resolution.
@@ -87,9 +93,10 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
         relevance, quality, duration, width, height = _details(hit)
         return relevance * 4.0 + quality + (0.15 if duration >= 8 else 0.0) + (0.1 if height >= 720 else 0.0)
     eligible = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)]
-    # Avoid clips with no keyword/tag overlap where the search response is generic.
-    eligible = [h for h in eligible if _details(h)[0] >= 0.15 or len(query_tokens) <= 1]
-    chosen = sorted(eligible, key=_score, reverse=True)[:count]
+    # Prefer tag overlap; if it removes every result, keep provider-returned clips
+    # rather than aborting a scene. Ranking still favors matching tags and quality.
+    relevant = [h for h in eligible if _details(h)[0] >= 0.15 or len(query_tokens) <= 1]
+    chosen = sorted(relevant or eligible, key=_score, reverse=True)[:count]
     if len(chosen) < count:
         # A smaller set is allowed only if at least one usable result is found.
         if not chosen:
