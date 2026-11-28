@@ -60,7 +60,7 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
         hits = entry.get("hits") or []
     else:
         response = requests.get(PIXABAY_URL, params=params, timeout=30)
-        if response.status_code == 400:
+        if getattr(response, "status_code", 200) == 400:
             # Retry once with a shorter, minimal query.
             fallback_params = {"key": key, "q": " ".join(normalized_query.split()[:3])}
             response = requests.get(PIXABAY_URL, params=fallback_params, timeout=30)
