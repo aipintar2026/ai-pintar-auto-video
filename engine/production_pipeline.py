@@ -58,7 +58,7 @@ def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30, avatar=N
         inputs += ["-i", str(avatar)]
     music_index=None
     if music and Path(music).exists():
-        music_index=narration_index+1
+        music_index=len(clips)+1+(1 if avatar_index is not None else 0)
         inputs += ["-stream_loop", "-1", "-i", str(music)]
     segment=duration/len(clips)
     filters=[]
