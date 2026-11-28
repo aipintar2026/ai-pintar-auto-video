@@ -73,9 +73,9 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
     # Rank search results by tag relevance and usable source quality instead of
     # taking the API's first hits blindly. This remains heuristic, not semantic QC.
     # Normalize tokenization consistently; prioritize semantic tag overlap and usable resolution.
-    query_tokens = {t.lower() for t in re.findall(r"\\w+", normalized_query) if len(t) > 2}
+    query_tokens = {t.lower() for t in re.findall(r"\w+", normalized_query) if len(t) > 2}
     def _details(hit):
-        tags = {t.lower() for t in re.findall(r"\\w+", str(hit.get("tags", "")))}
+        tags = {t.lower() for t in re.findall(r"\w+", str(hit.get("tags", "")))}
         relevance = len(query_tokens & tags) / max(1, len(query_tokens))
         videos = hit.get("videos") or {}
         best = videos.get("large") or videos.get("medium") or videos.get("small") or videos.get("tiny") or {}
