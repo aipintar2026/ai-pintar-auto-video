@@ -41,7 +41,7 @@ def _escape_filter_path(path):
     return str(path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace(",", "\\,")
 
 
-def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30):
+def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30, avatar=None):
     if not clips:
         raise ValueError("Render membutuhkan minimal satu footage.")
     duration = _duration(narration)
@@ -52,6 +52,10 @@ def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30):
         inputs += ["-stream_loop", "-1", "-i", str(clip)]
     narration_index=len(clips)
     inputs += ["-i", str(narration)]
+    avatar_index=None
+    if avatar and Path(avatar).exists():
+        avatar_index=len(clips)+1
+        inputs += ["-i", str(avatar)]
     music_index=None
     if music and Path(music).exists():
         music_index=narration_index+1
@@ -68,6 +72,9 @@ def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30):
     sub_path=_escape_filter_path(render_subtitles)
     filters.append(f"[bg]subtitles='{sub_path}'[sub]")
     video_label="sub"
+    if avatar_index is not None:
+        filters.append(f"[{avatar_index}:v]scale=420:746:force_original_aspect_ratio=increase,crop=420:746,fps={fps},trim=duration={duration:.6f},setpts=PTS-STARTPTS[avatar];[sub][avatar]overlay=W-460:H-900:shortest=1[vout]")
+        video_label="vout"
     if music_index is not None:
         filters.append(f"[{narration_index}:a]aformat=sample_rates=48000:channel_layouts=stereo[voice]")
         filters.append(f"[{music_index}:a]volume=0.12,atrim=duration={duration:.6f},aformat=sample_rates=48000:channel_layouts=stereo[music]")
@@ -228,11 +235,18 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         caption=caption_and_srt(topic,script,dur,out)
 
         # Faceless format: footage, narration, dynamic subtitles and optional licensed music.
-        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',vid,music=music)
+        avatar_result=None
+        avatar_path=None
+        if os.getenv('DID_AVATAR_ENABLED','false').lower()=='true':
+            from .did_avatar import create_avatar_video
+            avatar_path=out/'presenter.mp4'
+            avatar_result=create_avatar_video(audio,avatar_path)
+            probe_video(avatar_path)
+        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',vid,music=music,avatar=avatar_path)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
         manifest={'topic':topic,'visual_source':'local_generated_visual_cards','footage_qc':footage_qc,'duration':qc['duration'],'resolution':qc['resolution'],
-                  'video_format':'faceless','cover':cover_qc,'ai_video_prompt_pack':str(out/'ai_video_prompt_pack.json'),'ai_video_prompt_scenes':len(prompt_pack.get('scenes',[])),
+                  'video_format':'presenter_inset' if avatar_result else 'faceless','presenter_result':avatar_result,'cover':cover_qc,'ai_video_prompt_pack':str(out/'ai_video_prompt_pack.json'),'ai_video_prompt_scenes':len(prompt_pack.get('scenes',[])),
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
         (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
