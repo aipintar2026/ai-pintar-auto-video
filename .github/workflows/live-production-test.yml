@@ -2,6 +2,12 @@ name: AI PINTAR 2.0 Live Production Test (No Publishing)
 
 on:
   workflow_dispatch:
+    inputs:
+      enable_did_avatar:
+        description: 'Generate talking presenter using D-ID (uses credits; requires secrets)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,6 +44,9 @@ jobs:
           TTS_VOICE: id-ID-ArdiNeural
           PUBLISH_ENABLED: "false"
           PUBLISH_DRY_RUN: "true"
+          DID_AVATAR_ENABLED: ${{ inputs.enable_did_avatar }}
+          DID_API_KEY: ${{ secrets.DID_API_KEY }}
+          DID_SOURCE_URL: ${{ secrets.DID_SOURCE_URL }}
         run: |
           python run_production.py --output output_live_test
 
