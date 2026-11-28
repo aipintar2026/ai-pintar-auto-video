@@ -8,7 +8,8 @@ from .integrations import create_tts, cloudinary_upload, buffer_queue
 from .generated_visuals import generate_visual_clips
 from .qc import probe_video, prepublish_checks
 from .publish_guard import check_publish_allowed
-from .cover import create_cover_from_video\nfrom .ai_video_prompts import build_prompt_pack
+from .cover import create_cover_from_video
+from .ai_video_prompts import build_prompt_pack
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -101,7 +102,9 @@ def _subtitle_chunks(script, max_chars=34, max_lines=2, max_words=14):
 
 
 def caption_and_srt(topic, script, duration, output):
-    caption=f"{topic['title']}\n\nBelajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
+    caption=f"{topic['title']}
+
+Belajar AI secara praktis bersama AI PINTAR. #AI #BelajarAI #AIIndonesia"
     Path(output/'caption.txt').write_text(caption,encoding='utf-8')
     chunks=_subtitle_chunks(script)
     weights=[max(11,len(chunk)) for chunk in chunks]
@@ -113,11 +116,17 @@ def caption_and_srt(topic, script, duration, output):
         start=elapsed
         elapsed=duration if index==len(chunks) else elapsed+(duration*weight/total)
         wrapped=textwrap.wrap(chunk,width=34,break_long_words=False,break_on_hyphens=False)
-        srt_text="\n".join(wrapped)
-        cues.append(f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\n{srt_text}")
+        srt_text="
+".join(wrapped)
+        cues.append(f"{index}
+{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}
+{srt_text}")
         ass_text=r"\N".join(wrapped).replace("{",r"\{").replace("}",r"\}")
         ass_events.append(f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(elapsed)},Default,,0,0,0,,{ass_text}")
-    (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding='utf-8')
+    (Path(output)/'subtitles.srt').write_text("
+
+".join(cues)+"
+",encoding='utf-8')
     ass_header="""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
@@ -131,7 +140,9 @@ Style: Default,DejaVu Sans,34,&H00FFFFFF,&H0000FFFF,&H00101010,&H90000000,1,0,0,
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
-    (Path(output)/'subtitles.ass').write_text(ass_header+"\n".join(ass_events)+"\n",encoding='utf-8')
+    (Path(output)/'subtitles.ass').write_text(ass_header+"
+".join(ass_events)+"
+",encoding='utf-8')
     return caption
 
 def _srt_timestamp(seconds):
@@ -206,7 +217,8 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
     topic=selected['topic']; topic_id=topic['id']
     try:
         story=make_story(topic); script=story.narration()
-        (out/'script.txt').write_text(script,encoding='utf-8')\n        prompt_pack=build_prompt_pack(topic,script,out)
+        (out/'script.txt').write_text(script,encoding='utf-8')
+        prompt_pack=build_prompt_pack(topic,script,out)
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
         # Generate designed, topic-labeled visual scenes locally. No stock-media
