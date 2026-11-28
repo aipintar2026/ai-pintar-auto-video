@@ -72,18 +72,23 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
         temp_cache.replace(cache_path)
     # Rank search results by tag relevance and usable source quality instead of
     # taking the API's first hits blindly. This remains heuristic, not semantic QC.
-    query_tokens = {t.lower() for t in re.findall(r"[\\w-]+", normalized_query) if len(t) > 2}
-    def _score(hit):
-        tags = {t.lower() for t in re.findall(r"[\\w-]+", str(hit.get("tags", "")))}
+    # Normalize tokenization consistently; prioritize semantic tag overlap and usable resolution.
+    query_tokens = {t.lower() for t in re.findall(r"\\w+", normalized_query) if len(t) > 2}
+    def _details(hit):
+        tags = {t.lower() for t in re.findall(r"\\w+", str(hit.get("tags", "")))}
         relevance = len(query_tokens & tags) / max(1, len(query_tokens))
         videos = hit.get("videos") or {}
         best = videos.get("large") or videos.get("medium") or videos.get("small") or videos.get("tiny") or {}
         width = int(best.get("width") or 0); height = int(best.get("height") or 0)
         duration = int(hit.get("duration") or 0)
         quality = min(width / 1080, 1.0) if width else 0.0
-        length_bonus = 0.1 if duration >= 8 else 0.0
-        return relevance * 3.0 + quality + length_bonus
+        return relevance, quality, duration, width, height
+    def _score(hit):
+        relevance, quality, duration, width, height = _details(hit)
+        return relevance * 4.0 + quality + (0.15 if duration >= 8 else 0.0) + (0.1 if height >= 720 else 0.0)
     eligible = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)]
+    # Avoid clips with no keyword/tag overlap where the search response is generic.
+    eligible = [h for h in eligible if _details(h)[0] >= 0.15 or len(query_tokens) <= 1]
     chosen = sorted(eligible, key=_score, reverse=True)[:count]
     if len(chosen) < count:
         # A smaller set is allowed only if at least one usable result is found.
