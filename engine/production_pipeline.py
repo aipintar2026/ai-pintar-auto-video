@@ -57,7 +57,9 @@ def ffmpeg_render(clips, narration, subtitles, out, music=None, fps=30):
     segment=duration/len(clips)
     filters=[]
     for i, clip in enumerate(clips):
-        filters.append(f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps={fps},trim=duration={segment:.6f},setpts=PTS-STARTPTS[v{i}]")
+        # Keep the full source frame visible; use a softened, cropped backdrop
+        # to fill portrait canvas instead of aggressively cropping the subject.
+        filters.append(f"[{i}:v]split=2[bg{i}][fg{i}];[bg{i}]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=24:12[blur{i}];[fg{i}]scale=1080:1920:force_original_aspect_ratio=decrease[fit{i}];[blur{i}][fit{i}]overlay=(W-w)/2:(H-h)/2,setsar=1,fps={fps},trim=duration={segment:.6f},setpts=PTS-STARTPTS[v{i}]")
     filters.append("".join(f"[v{i}]" for i in range(len(clips)))+f"concat=n={len(clips)}:v=1:a=0[bg]")
     ass_path=Path(subtitles).with_suffix(".ass")
     render_subtitles=ass_path if ass_path.exists() else Path(subtitles)
