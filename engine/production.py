@@ -8,11 +8,12 @@ BASE=Path(__file__).resolve().parent.parent
 
 def make_story(topic):
     title=topic['title']; angle=topic.get('angle','')
+    # Compact narration template designed to fit the real-production 30-46s window.
     return Story(
       hook=f"Pernah bingung menggunakan AI untuk {title.lower()}?",
-      problem="Prompt yang singkat sering menghasilkan jawaban terlalu umum atau meleset. Jangan langsung menerima hasil pertama; periksa apakah jawaban sesuai kebutuhan.",
-      solution=f"Jelaskan tujuan, konteks, dan format yang diinginkan. Fokus: {angle.lower()}. Berikan contoh serta batasan, lalu minta langkah terstruktur jika perlu. Periksa fakta dan sesuaikan hasilnya sebelum digunakan.",
-      extra="Jika belum sesuai, tambahkan detail atau contoh dan perjelas instruksi. AI membantu pekerjaan, tetapi pemeriksaan akhir tetap dilakukan manusia. Catat langkah yang berhasil, gunakan ulang pola instruksi, dan jangan memasukkan data pribadi atau rahasia ke dalam prompt.",
+      problem="Instruksi terlalu umum sering membuat jawaban AI meleset. Karena itu, jangan langsung memakai hasil pertama.",
+      solution=f"Tulis tujuan, konteks, dan format jawaban dengan jelas. Fokus pada {angle.lower()}. Tambahkan satu contoh dan batasan agar AI memahami kebutuhan, lalu minta langkah yang praktis.",
+      extra="Periksa fakta sebelum memakai hasilnya. Jika belum sesuai, perjelas prompt dan coba kembali. Hindari memasukkan data pribadi atau rahasia. AI membantu, keputusan akhir tetap di tangan kita.",
       cta="Simpan tips ini dan ikuti AI PINTAR."
     )
 
