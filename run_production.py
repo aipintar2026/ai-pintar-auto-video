@@ -8,5 +8,5 @@ p.add_argument('--upload-cloudinary',action='store_true',help='Upload to Cloudin
 p.add_argument('--music',default=None,help='Optional licensed music file supplied by user')
 p.add_argument('--channel-ids',default='',help='Comma-separated Buffer channel IDs')
 a=p.parse_args()
-result=run_pipeline(a.output,a.publish,None,[x.strip() for x in a.channel_ids.split(',') if x.strip()],upload_cloudinary=a.upload_cloudinary,music=a.music)
+result=run_pipeline(a.output,a.publish,[x.strip() for x in a.channel_ids.split(',') if x.strip()],upload_cloudinary=a.upload_cloudinary,music=a.music)
 print(json.dumps(result,ensure_ascii=False,indent=2))
