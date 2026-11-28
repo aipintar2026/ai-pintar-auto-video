@@ -39,10 +39,15 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
     if count < 1 or count > 10:
         raise ValueError("Jumlah footage harus 1-10.")
     used = {str(x) for x in (used_ids or [])}
+    # Normalize the search query: Pixabay rejects malformed/markup-like query strings.
+    normalized_query = re.sub(r"[^\\w\\s-]", " ", str(query), flags=re.UNICODE)
+    normalized_query = re.sub(r"\\s+", " ", normalized_query).strip()[:80]
+    if not normalized_query:
+        raise ValueError("Query Pixabay tidak valid setelah normalisasi.")
     params = {
         "key": key,
-        "q": str(query)[:100],
-        "lang": "id",
+        "q": normalized_query,
+        "lang": "en",
         "video_type": "film",
         "per_page": 30,
         "safesearch": "true",
@@ -62,6 +67,10 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
         hits = entry.get("hits") or []
     else:
         response = requests.get(PIXABAY_URL, params=params, timeout=30)
+        if response.status_code == 400:
+            # Retry once with a shorter, broad query and fewer restrictive parameters.
+            fallback_params = {"key": key, "q": " ".join(normalized_query.split()[:4]), "per_page": 30, "safesearch": "true"}
+            response = requests.get(PIXABAY_URL, params=fallback_params, timeout=30)
         response.raise_for_status()
         hits = response.json().get("hits") or []
         cache[cache_key] = {"query": params["q"], "fetched_at": time.time(), "hits": hits}
