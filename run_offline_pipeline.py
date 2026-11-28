@@ -5,7 +5,6 @@ from engine.production_pipeline import caption_and_srt, ffmpeg_render
 from engine.production import make_story
 from engine.qc import prepublish_checks
 from engine.cover import create_cover_from_video
-from engine.presenter import generate_master_presenter
 
 BASE=Path(__file__).resolve().parent
 OUT=Path("output_offline")
@@ -26,14 +25,13 @@ for i in range(5):
 voice=OUT/"synthetic_voice.mp3"
 subprocess.run(["ffmpeg","-y","-f","lavfi","-i",f"sine=frequency=600:duration={DURATION}","-c:a","libmp3lame","-q:a","5",str(voice)],check=True,capture_output=True,timeout=120)
 caption=caption_and_srt(TOPIC,SCRIPT,DURATION,OUT)
-avatar=generate_master_presenter(OUT/"presenter_master.png")
 music=OUT/"synthetic_music.mp3"
 subprocess.run(["ffmpeg","-y","-f","lavfi","-i",f"sine=frequency=120:duration={DURATION}","-c:a","libmp3lame","-q:a","5",str(music)],check=True,capture_output=True,timeout=60)
 video=OUT/"final_video.mp4"
-ffmpeg_render(clips,voice,OUT/"subtitles.srt",avatar,video,music=music,fps=10)
+ffmpeg_render(clips,voice,OUT/"subtitles.srt",None,video,music=music,fps=10)
 cover=OUT/"cover.jpg"
 cover_qc=create_cover_from_video(clips[0],cover,TOPIC["title"])
 qc=prepublish_checks(video,OUT/"caption.txt",TOPIC["id"],OUT/"subtitles.srt",cover=cover,cover_title=TOPIC["title"],cover_layout=cover_qc)
-manifest={"mode":"offline_synthetic","topic":TOPIC,"qc":qc,"external_calls":False,"publish":False,"presenter_overlay":True,"presenter_master_generated":True,"cover_qc":cover_qc,"music_mix":True}
+manifest={"mode":"offline_synthetic","topic":TOPIC,"qc":qc,"external_calls":False,"publish":False,"presenter_overlay":False,"video_format":"faceless","cover_qc":cover_qc,"music_mix":True}
 (OUT/"manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False),encoding="utf-8")
 print(json.dumps(manifest,indent=2,ensure_ascii=False))
