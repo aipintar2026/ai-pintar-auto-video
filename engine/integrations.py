@@ -73,7 +73,7 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
             temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
             temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
             temp_cache.replace(cache_path)
-        if candidate_hits:
+        if any(str(h.get("id")) not in used and _pixabay_video_url(h) for h in candidate_hits):
             hits = candidate_hits
             break
     # Rank search results by tag relevance and usable source quality instead of
