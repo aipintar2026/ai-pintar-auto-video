@@ -4,7 +4,8 @@ import json, hashlib, os, subprocess, re, textwrap
 from pathlib import Path
 from .topic_memory import TopicMemory
 from .production import make_story
-from .integrations import pixabay_download, create_tts, cloudinary_upload, buffer_queue
+from .integrations import create_tts, cloudinary_upload, buffer_queue
+from .generated_visuals import generate_visual_clips
 from .qc import probe_video, prepublish_checks
 from .publish_guard import check_publish_allowed
 from .cover import create_cover_from_video
@@ -208,29 +209,19 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
     try:
         story=make_story(topic); script=story.narration()
         (out/'script.txt').write_text(script,encoding='utf-8')
-        media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
-        used_ids=_load_media_ids(media_ids_path)
-        # Search separately for each narration beat, not one broad topic query.
-        clips, ids = [], []
-        for scene_no, footage_query in enumerate(_scene_queries(topic, script, count=5), 1):
-            scene_dir = work / f"scene_{scene_no:02d}"
-            scene_dir.mkdir(parents=True, exist_ok=True)
-            scene_clips, scene_ids = pixabay_download(footage_query, key, scene_dir, used_ids=[*used_ids, *ids], count=1)
-            clips.extend(scene_clips)
-            ids.extend(scene_ids)
-        if len(clips) < 3:
-            raise RuntimeError(f'QC: minimal 3 scene-specific footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
-        footage_qc=_validate_footage(clips)
-        (out/'pixabay_ids.json').write_text(json.dumps(ids,indent=2),encoding='utf-8')
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
+        # Generate designed, topic-labeled visual scenes locally. No stock-media
+        # API or downloaded generic clips are used for this production path.
+        clips=generate_visual_clips(topic,script,work,dur,count=5)
+        footage_qc=_validate_footage(clips)
         caption=caption_and_srt(topic,script,dur,out)
 
         # Faceless format: footage, narration, dynamic subtitles and optional licensed music.
         vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',vid,music=music)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
-        manifest={'topic':topic,'pixabay_ids':ids,'footage_qc':footage_qc,'duration':qc['duration'],'resolution':qc['resolution'],
+        manifest={'topic':topic,'visual_source':'local_generated_visual_cards','footage_qc':footage_qc,'duration':qc['duration'],'resolution':qc['resolution'],
                   'video_format':'faceless','cover':cover_qc,
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
