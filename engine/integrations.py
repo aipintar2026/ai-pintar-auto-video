@@ -67,6 +67,10 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
             candidate_hits = entry.get("hits") or []
         else:
             response = requests.get(PIXABAY_URL, params=params, timeout=30)
+            if getattr(response, "status_code", 200) == 400:
+                shorter = " ".join(search_q.split()[:3])
+                if shorter and shorter != search_q:
+                    response = requests.get(PIXABAY_URL, params={"key":key,"q":shorter}, timeout=30)
             response.raise_for_status()
             candidate_hits = response.json().get("hits") or []
             cache[cache_key] = {"query": search_q, "fetched_at": time.time(), "hits": candidate_hits}
