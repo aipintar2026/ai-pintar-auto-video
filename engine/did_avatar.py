@@ -20,7 +20,7 @@ def _check(response, step):
             detail = response.text[:1800]
         request_id = response.headers.get("x-request-id") or response.headers.get("request-id")
         suffix = f" (request_id={request_id})" if request_id else ""
-        raise RuntimeError(f"D-ID {step} HTTP {response.status}{suffix}: {detail}")
+        raise RuntimeError(f"D-ID {step} HTTP {response.status_code}{suffix}: {detail}")
     return response
 
 
