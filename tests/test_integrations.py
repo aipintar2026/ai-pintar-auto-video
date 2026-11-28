@@ -161,3 +161,29 @@ def test_buffer_disconnected_channel_fails_before_manifest_or_post(tmp_path, mon
         integrations.buffer_queue('https://cloud.invalid/video','caption',['c1'],enabled=True,manifest_path=manifest,content_key='blocked')
     assert len(calls)==1
     assert not manifest.exists()
+
+
+def test_pixabay_400_retries_with_minimal_query(tmp_path, monkeypatch):
+    class Resp:
+        def __init__(self, status, hits=None): self.status_code=status; self._hits=hits or []
+        def raise_for_status(self):
+            if self.status_code >= 400: raise RuntimeError(f"HTTP {self.status_code}")
+        def json(self): return {"hits": self._hits}
+    calls=[]
+    search_hit={"id":88,"videos":{"small":{"url":"https://video.invalid/88"}}}
+    def fake_get(url, **kwargs):
+        calls.append(kwargs.get("params"))
+        if not kwargs.get("stream"):
+            return Resp(400) if len(calls)==1 else Resp(200,[search_hit])
+        class Download:
+            def __enter__(self): return self
+            def __exit__(self,*a): return None
+            def raise_for_status(self): pass
+            def iter_content(self,chunk_size): yield b"x"*120000
+        return Download()
+    monkeypatch.setattr(integrations.requests,"get",fake_get)
+    files, ids=integrations.pixabay_download("video pendek caption email artikel!","key",tmp_path,count=1,cache_path=tmp_path/"cache.json")
+    assert ids==["88"]
+    assert len(calls)>=3
+    assert "video_type" not in calls[0] and "lang" not in calls[0]
+    assert calls[1]["q"]=="video pendek caption"
