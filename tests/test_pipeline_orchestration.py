@@ -1,0 +1,94 @@
+import json
+from pathlib import Path
+from types import SimpleNamespace
+import pytest
+from engine import production_pipeline as pipeline
+from engine.topic_memory import TopicMemory
+
+
+def _memory(tmp_path):
+    topics=tmp_path/"topics.json"
+    topics.write_text(json.dumps([{"id":"topic-a","title":"Topik uji","angle":"uji pipeline"}]),encoding="utf-8")
+    state=tmp_path/"topic-state.json"
+    return TopicMemory(topics,state),state
+
+
+def _patch_story(monkeypatch):
+    monkeypatch.setattr(pipeline,"make_story",lambda topic:SimpleNamespace(narration=lambda:"Naskah uji pipeline untuk pengujian terisolasi."))
+
+
+def test_pipeline_mocked_end_to_end_offline(tmp_path,monkeypatch):
+    memory,state_path=_memory(tmp_path)
+    monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
+    monkeypatch.setattr(pipeline,"ROOT",tmp_path)
+    _patch_story(monkeypatch)
+
+    def fake_visuals(topic,script,outdir,duration,count=5):
+        clips=[]
+        for i in range(count):
+            clip=Path(outdir)/f"clip-{i}.mp4"
+            clip.write_bytes(b"x"*100_000)
+            clips.append(str(clip))
+        return clips
+    monkeypatch.setattr(pipeline,"generate_visual_clips",fake_visuals)
+    monkeypatch.setattr(pipeline,"create_tts",lambda script,path:(Path(path).write_bytes(b"x"*20_000) or str(path)))
+    monkeypatch.setattr(pipeline,"_duration",lambda path:35.0)
+    # Synthetic mocked clips are byte placeholders; bypass media probing in orchestration unit test.
+    monkeypatch.setattr(pipeline,"_validate_footage",lambda clips:[{"file":Path(x).name,"resolution":"1080x1920","duration":35.0} for x in clips])
+    def fake_render(clips,narration,subtitles,out,music=None,avatar=None):
+        Path(out).write_bytes(b"x"*200_000)
+        return out
+    monkeypatch.setattr(pipeline,"ffmpeg_render",fake_render)
+    monkeypatch.setattr(pipeline,"prepublish_checks",lambda *a,**k:{"duration":35.0,"resolution":"1080x1920","audio":True})
+    def fake_cover(video,cover,title):
+        Path(cover).write_bytes(b"x"*12_000)
+        return {"cover_qc_status":"PASS","resolution":"1080x1920"}
+    monkeypatch.setattr(pipeline,"create_cover_from_video",fake_cover)
+
+    out=tmp_path/"output"
+    result=pipeline.run_pipeline(outdir=out,publish=False)
+    manifest=json.loads((out/"manifest.json").read_text(encoding="utf-8"))
+    assert result["publish_result"]=="not attempted"
+    assert manifest["publish_result"]=="not attempted"
+    assert manifest["qc"]["resolution"]=="1080x1920"
+    assert manifest["video_format"]=="faceless"
+    assert "presenter" not in manifest
+    assert "avatar" not in manifest
+    assert manifest["cover"]["cover_qc_status"]=="PASS"
+    assert (out/"final_video.mp4").stat().st_size>=100_000
+    assert memory.state["used_ids"]==["topic-a"]
+
+
+def test_pipeline_failure_releases_topic_for_recovery(tmp_path,monkeypatch):
+    memory,state_path=_memory(tmp_path)
+    monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
+    monkeypatch.setattr(pipeline,"ROOT",tmp_path)
+    _patch_story(monkeypatch)
+    monkeypatch.setattr(pipeline,"generate_visual_clips",lambda *a,**k: (_ for _ in ()).throw(RuntimeError("simulated visual generation failure")))
+    with pytest.raises(RuntimeError,match="simulated visual generation failure"):
+        pipeline.run_pipeline(outdir=tmp_path/"failed-output",publish=False)
+    reopened=TopicMemory(tmp_path/"topics.json",state_path)
+    assert "topic-a" not in reopened.state["used_ids"]
+    assert reopened.state["failures"][-1]["reason"]=="simulated visual generation failure"
+    assert reopened.remaining()==1
+
+def test_pipeline_story_failure_releases_topic(tmp_path,monkeypatch):
+    memory,state_path=_memory(tmp_path)
+    monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
+    monkeypatch.setattr(pipeline,"ROOT",tmp_path)
+    monkeypatch.setenv("PIXABAY_API_KEY","test-key")
+    monkeypatch.setattr(pipeline,"make_story",lambda topic:(_ for _ in ()).throw(RuntimeError("simulated script failure")))
+    with pytest.raises(RuntimeError,match="simulated script failure"):
+        pipeline.run_pipeline(outdir=tmp_path/"story-failed",publish=False)
+    reopened=TopicMemory(tmp_path/"topics.json",state_path)
+    assert "topic-a" not in reopened.state["used_ids"]
+    assert reopened.state["failures"][-1]["reason"]=="simulated script failure"
+
+
+def test_publish_reconciliation_key_stable_across_media_retries():
+    from engine.production_pipeline import _publish_content_key
+    key1 = _publish_content_key("topic-a", "caption")
+    key2 = _publish_content_key("topic-a", "  caption  ")
+    assert key1 == key2
+    assert key1 != _publish_content_key("topic-b", "caption")
+

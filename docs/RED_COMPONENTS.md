@@ -1,17 +1,22 @@
-# Presenter, music, Cloudinary and Buffer status
+# Faceless pipeline and external integration status
 
-## Presenter
+## Format
+AI PINTAR 2.0 staging is faceless: footage, Indonesian narration, subtitles, cover and QC. Presenter, talking-avatar and lip-sync work is cancelled and excluded from the production pipeline.
 
-The renderer accepts a static image overlay or a supplied video presenter clip. A video clip can show motion; the package does not generate a talking-head or lip-sync avatar. The same approved asset can be used on every run to keep visual identity consistent. Place it in `assets/presenter.png` or `assets/presenter.mp4` and pass `--avatar`.
+## Cover
+Cover generation uses a frame from footage with an AI PINTAR title overlay. Structural QC checks resolution, title layout and safe-zone. Semantic footage/title match still needs human review.
 
 ## Music
-
-Optional, operator-supplied licensed music is mixed at a low fixed volume. There is no automatic music search or license verification. Use `--music` only with audio that you have rights to use.
+Optional music must be supplied by the operator with rights to use it. Automatic music search/license verification is not implemented.
 
 ## Cloudinary
-
-Signed upload integration is included and tested with a mocked response. The live account has not been validated. The staging workflow has an opt-in Cloudinary test, which uploads but does not publish.
+Signed upload construction and response validation are mock-tested. Live account validation remains pending. CI does not upload.
 
 ## Buffer
+Channel lookup, payload construction, queue-mode, metadata and reconciliation are mock-tested. Live Buffer credentials/channel validation remain pending. CI does not publish.
 
-The current GraphQL mutation, channel lookup, video asset shape, scheduling mode, Instagram/Facebook/YouTube metadata, and manifest reconciliation are included and tested with mocks. Live Buffer credentials/channels have not been validated. The staging workflow never calls Buffer and has no publishing input. Pinterest is fail-closed until a board ID is explicitly configured. Do not retry a post marked `pending` or `unknown` without reconciling it in the Buffer dashboard first.
+## Pixabay / Edge TTS
+Provider paths are mocked in tests. No live network/API calls are performed by CI.
+
+## Safety boundary
+PR #3 is staging-only and unmerged. The production workflow on main remains untouched.

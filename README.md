@@ -1,6 +1,6 @@
 # AI PINTAR 2.0 — staging package
 
-**Staging only. This package does not modify or replace AI PINTAR 1. It contains no production schedule and the GitHub staging workflow cannot queue posts.**
+**Staging only. This package does not modify or replace AI PINTAR 1. PR #3 targets `ai-pintar-2-staging`. The safety-test workflow runs on pull requests to that branch and manual dispatch. It has no publishing steps or secrets.**
 
 ## What it includes
 
@@ -8,20 +8,23 @@
 - Structured Indonesian script generator (hook, problem, solution, insight, CTA)
 - Pixabay search/download with 24-hour result cache and used-ID tracking
 - Edge TTS (`id-ID-ArdiNeural` by default)
-- FFmpeg 1080×1920 render, burned subtitles, optional approved presenter image/video overlay, optional licensed music at low gain
-- QC for video/audio streams, resolution, duration, captions, subtitle file and topic ID
-- Signed Cloudinary upload (optional staging test)
-- Buffer GraphQL queue helper with channel checks, channel-aware notification/automatic mode, and manifest reconciliation; **not invoked by the GitHub staging workflow**
+- FFmpeg 1080×1920 render, burned subtitles (SRT + ASS), optional licensed music
+- Cover generation from the first footage frame with title overlay and structural QC
+- QC for video/audio streams, resolution, duration, caption, subtitle dwell/CPS, ASS/SRT parity and cover safe-zone
+- Signed Cloudinary upload helper (optional local staging test)
+- Buffer GraphQL queue helper with channel checks and manifest reconciliation; **not invoked by the GitHub safety workflow**
 - Offline synthetic-media test and unit tests
 
 ## Quick offline test (local)
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install --require-hashes -r requirements.lock
 sudo apt-get install ffmpeg   # Linux; install FFmpeg/ffprobe on other platforms
 python -m pytest -q
 python run_offline_pipeline.py
 ```
+
+The offline pipeline produces a synthetic video, caption, SRT/ASS, manifest and cover. It makes no external provider calls and does not publish.
 
 ## Live media test (local)
 
@@ -31,14 +34,13 @@ Set `PIXABAY_API_KEY` and install requirements. Optional `TTS_VOICE` defaults to
 python run_production.py --output output_production
 ```
 
-This downloads five unique footage clips, generates narration, subtitles and a video, and runs QC. It does **not** upload to Cloudinary or queue posts.
+This downloads five unique footage clips, generates narration, subtitles, footage and cover, then runs QC. It does **not** upload to Cloudinary or queue posts.
 
-Optional approved presenter asset:
+## Production format
 
-- `assets/presenter.png` for a static overlay; or
-- an approved `assets/presenter.mp4`/`.mov`/`.mkv`/`.webm` clip for a video overlay.
+The current staging renderer remains a faceless proof-of-pipeline and does not yet satisfy the intended visual target. The revised target is a consistent stylized 3D presenter with narration-synchronized lip movement, natural gestures, topic-relevant motion footage, subtitles, cover and QC. See `docs/VISUAL_PRODUCTION_TARGET.md` for scope and acceptance gates. The talking-avatar engine is **not yet integrated or validated**; prompt packs alone are not a rendered presenter.
 
-This is an overlay, not automatic avatar creation or lip-sync. Optional music must be supplied by the operator with rights to use it:
+Optional music must be supplied by the operator with rights to use it:
 
 ```bash
 python run_production.py --music assets/music.mp3
@@ -52,20 +54,25 @@ Set the three Cloudinary secrets in the environment and run:
 python run_production.py --upload-cloudinary
 ```
 
-This uploads the QC-approved video to the staging folder and does not queue it to social channels.
+This uploads the QC-approved video to the staging folder and does not queue it to social channels. Live account validation is not part of GitHub CI.
 
 ## Buffer queue
 
-The helper is included and unit-tested, but **live account/channel testing has not been performed**. Queueing is not exposed by the staging GitHub workflow. For a deliberate local run only, after reviewing the video, confirming the public Cloudinary URL and checking the Buffer queue, the operator must explicitly pass `--publish`, channel IDs, and set `PUBLISH_ENABLED=true` and `PUBLISH_DRY_RUN=false`. The helper checks the channel, chooses notification scheduling for Instagram personal profiles/Facebook groups, and writes a per-channel manifest. `pending`/`unknown` outcomes are not retried automatically; reconcile them in Buffer first.
+The helper is included and unit-tested, but **live account/channel testing has not been performed**. Queueing is not exposed by the staging GitHub workflow. For a deliberate local run only, after reviewing the video, confirming the public Cloudinary URL and checking the Buffer queue, the operator must explicitly pass `--publish`, channel IDs, and set `PUBLISH_ENABLED=true` and `PUBLISH_DRY_RUN=false`. The helper checks the channel, writes a per-channel manifest and does not blindly retry `pending`/`unknown` outcomes; reconcile them in Buffer first.
 
-## GitHub staging installation
+## Dependency lock
 
-See `docs/INSTALL_GITHUB.md`. It uses a **single ZIP upload** plus a separate manual workflow file so Android/mobile installation does not require uploading nested folders. It must be installed on `ai-pintar-2-staging`, not `main`.
+`requirements.in` lists direct dependencies and `requirements.lock` pins the full resolved set with hashes. Staging CI regenerates the lock using pinned pip/pip-tools, checks that the committed lock is unchanged, and installs with `--require-hashes`. The lock verification was included in Run #110 and passed.
+
+## GitHub staging workflow
+
+The current workflow is already in `.github/workflows/auto-video.yml`. See `docs/INSTALL_GITHUB.md`. **Do not upload a ZIP or create a second workflow.** Run the safe test on the repair branch or review PR #3. No secrets or publishing inputs are used.
 
 ## Safety boundaries
 
-- No cron/schedule is included or changed.
-- No workflow input for social publishing exists.
-- No Buffer token or publishing secrets are injected into the GitHub staging workflow.
-- The workflow runs offline by default; live Pixabay/TTS and Cloudinary upload are opt-in.
+- The safety-test workflow runs for pull requests targeting `ai-pintar-2-staging` and manual dispatch; no cron schedule is present in this repair branch.
+- GitHub CI runs compilation, unit tests and a synthetic render only.
+- No Buffer token or social-publishing secrets are injected into that workflow.
+- Live Pixabay/TTS and Cloudinary checks are separate local CLI actions, not workflow inputs.
+- The existing `main` production schedule remains untouched and may queue posts independently. This repair branch does not stop or modify it.
 - Do not merge staging into `main` or change AI PINTAR 1 before explicit approval.

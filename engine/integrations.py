@@ -39,17 +39,13 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
     if count < 1 or count > 10:
         raise ValueError("Jumlah footage harus 1-10.")
     used = {str(x) for x in (used_ids or [])}
-    params = {
-        "key": key,
-        "q": str(query)[:100],
-        "lang": "id",
-        "video_type": "film",
-        "per_page": 30,
-        "safesearch": "true",
-    }
+    # Normalize query and use only documented, minimal search parameters.
+    normalized_query = re.sub(r"[^\w\s-]", " ", str(query), flags=re.UNICODE)
+    normalized_query = re.sub(r"\s+", " ", normalized_query).strip()[:80]
+    if not normalized_query:
+        raise ValueError("Query Pixabay tidak valid setelah normalisasi.")
     cache_path = Path(cache_path) if cache_path else Path(outdir).parent.parent / "state" / "pixabay_search_cache.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_key = hashlib.sha256((str(params["lang"]) + "|" + str(params["q"]).lower().strip()).encode()).hexdigest()
     cache = {}
     if cache_path.exists():
         try:
@@ -57,18 +53,54 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
             if not isinstance(cache, dict): raise ValueError("Cache bukan object.")
         except (OSError, json.JSONDecodeError, ValueError):
             raise RuntimeError("Cache Pixabay rusak; jangan hapus otomatis, periksa state/pixabay_search_cache.json.")
-    entry = cache.get(cache_key)
-    if entry and (time.time() - float(entry.get("fetched_at", 0))) < 24 * 60 * 60:
-        hits = entry.get("hits") or []
-    else:
-        response = requests.get(PIXABAY_URL, params=params, timeout=30)
-        response.raise_for_status()
-        hits = response.json().get("hits") or []
-        cache[cache_key] = {"query": params["q"], "fetched_at": time.time(), "hits": hits}
-        temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
-        temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
-        temp_cache.replace(cache_path)
-    chosen = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)][:count]
+
+    # Try the full scene phrase, a shorter phrase, then broad fallback terms.
+    tokens = normalized_query.split()
+    queries = [normalized_query, " ".join(tokens[:4]), " ".join(tokens[:2]), "technology", "computer"]
+    unique_queries = list(dict.fromkeys(q for q in queries if q))
+    hits = []
+    for search_q in unique_queries:
+        params = {"key": key, "q": search_q, "per_page": 30}
+        cache_key = hashlib.sha256(("|" + search_q.lower().strip()).encode()).hexdigest()
+        entry = cache.get(cache_key)
+        if entry and (time.time() - float(entry.get("fetched_at", 0))) < 24 * 60 * 60:
+            candidate_hits = entry.get("hits") or []
+        else:
+            response = requests.get(PIXABAY_URL, params=params, timeout=30)
+            if getattr(response, "status_code", 200) == 400:
+                shorter = " ".join(search_q.split()[:3])
+                if shorter and shorter != search_q:
+                    response = requests.get(PIXABAY_URL, params={"key":key,"q":shorter}, timeout=30)
+            response.raise_for_status()
+            candidate_hits = response.json().get("hits") or []
+            cache[cache_key] = {"query": search_q, "fetched_at": time.time(), "hits": candidate_hits}
+            temp_cache = cache_path.with_suffix(cache_path.suffix + ".tmp")
+            temp_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+            temp_cache.replace(cache_path)
+        if any(str(h.get("id")) not in used and _pixabay_video_url(h) for h in candidate_hits):
+            hits = candidate_hits
+            break
+    # Rank search results by tag relevance and usable source quality instead of
+    # taking the API's first hits blindly. This remains heuristic, not semantic QC.
+    # Normalize tokenization consistently; prioritize semantic tag overlap and usable resolution.
+    query_tokens = {t.lower() for t in re.findall(r"\w+", normalized_query) if len(t) > 2}
+    def _details(hit):
+        tags = {t.lower() for t in re.findall(r"\w+", str(hit.get("tags", "")))}
+        relevance = len(query_tokens & tags) / max(1, len(query_tokens))
+        videos = hit.get("videos") or {}
+        best = videos.get("large") or videos.get("medium") or videos.get("small") or videos.get("tiny") or {}
+        width = int(best.get("width") or 0); height = int(best.get("height") or 0)
+        duration = int(hit.get("duration") or 0)
+        quality = min(width / 1080, 1.0) if width else 0.0
+        return relevance, quality, duration, width, height
+    def _score(hit):
+        relevance, quality, duration, width, height = _details(hit)
+        return relevance * 4.0 + quality + (0.15 if duration >= 8 else 0.0) + (0.1 if height >= 720 else 0.0)
+    eligible = [h for h in hits if str(h.get("id")) not in used and _pixabay_video_url(h)]
+    # Prefer tag overlap; if it removes every result, keep provider-returned clips
+    # rather than aborting a scene. Ranking still favors matching tags and quality.
+    relevant = [h for h in eligible if _details(h)[0] >= 0.15 or len(query_tokens) <= 1]
+    chosen = sorted(relevant or eligible, key=_score, reverse=True)[:count]
     if len(chosen) < count:
         # A smaller set is allowed only if at least one usable result is found.
         if not chosen:
@@ -109,10 +141,9 @@ def pixabay_download(query: str, key: str, outdir, used_ids: Iterable[int] | Non
 
 
 def create_tts(text: str, output):
-    """Generate narration using the Edge TTS Python API; never relies on a CLI path."""
+    """Resilient Edge TTS: sentence-sized chunks, retries, voice fallback, and verified MP3 assembly."""
     if not text or not str(text).strip():
         raise ValueError("Teks TTS kosong.")
-    voice = os.getenv("TTS_VOICE", "id-ID-ArdiNeural")
     target = Path(output)
     target.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -120,13 +151,69 @@ def create_tts(text: str, output):
     except ImportError as exc:
         raise RuntimeError("Paket edge-tts belum terpasang; install requirements.txt.") from exc
 
-    async def _save():
-        communicator = edge_tts.Communicate(text, voice)
-        await communicator.save(str(target))
+    primary = os.getenv("TTS_VOICE", "id-ID-ArdiNeural")
+    voices = list(dict.fromkeys([primary, "id-ID-GadisNeural", "id-ID-ArdiNeural"]))
+    # Build manageable chunks at sentence boundaries, then split long sentences by words.
+    sentences = re.split(r"(?<=[.!?])\s+", str(text).strip())
+    chunks, current = [], ""
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if len(sentence) > 240:
+            pieces, piece = [], ""
+            for word in sentence.split():
+                if piece and len(piece)+len(word)+1 > 220:
+                    pieces.append(piece); piece=word
+                else:
+                    piece=(piece+" "+word).strip()
+            if piece: pieces.append(piece)
+        else:
+            pieces=[sentence]
+        for part in pieces:
+            if current and len(current)+len(part)+1>220:
+                chunks.append(current); current=part
+            else:
+                current=(current+" "+part).strip()
+    if current: chunks.append(current)
+    if not chunks: raise RuntimeError("Teks TTS kosong setelah pemecahan naskah.")
 
-    asyncio.run(_save())
-    if not target.exists() or target.stat().st_size < 10_000:
-        raise RuntimeError("Edge TTS tidak menghasilkan file audio yang valid.")
+    async def _synthesize():
+        produced=[]
+        for index, chunk in enumerate(chunks, 1):
+            temp=target.parent / f"{target.stem}_chunk_{index:03d}.mp3"
+            last_error=None
+            success=False
+            for voice in voices:
+                for attempt in range(1,4):
+                    try:
+                        communicator=edge_tts.Communicate(chunk, voice)
+                        await communicator.save(str(temp))
+                        if temp.exists() and temp.stat().st_size>=1500:
+                            success=True; break
+                        last_error=RuntimeError("Audio chunk kosong/terlalu kecil.")
+                    except Exception as exc:
+                        last_error=exc
+                    if attempt<3: await asyncio.sleep(2*attempt)
+                if success: break
+            if not success:
+                raise RuntimeError(f"Edge TTS gagal pada chunk {index}/{len(chunks)} setelah retry dan fallback voice: {last_error}")
+            produced.append(temp)
+        return produced
+
+    parts=asyncio.run(_synthesize())
+    # Concatenate MP3 segments through FFmpeg's concat demuxer, then validate output.
+    list_path=target.parent / f"{target.stem}_concat.txt"
+    list_path.write_text("".join(f"file '{p.resolve()}'\n" for p in parts),encoding="utf-8")
+    try:
+        subprocess.run(["ffmpeg","-y","-f","concat","-safe","0","-i",str(list_path),"-c","copy",str(target)],
+                       check=True,timeout=180,capture_output=True)
+    finally:
+        list_path.unlink(missing_ok=True)
+        for p in parts: p.unlink(missing_ok=True)
+    if not target.exists() or target.stat().st_size<10_000:
+        target.unlink(missing_ok=True)
+        raise RuntimeError("Edge TTS: hasil gabungan narration.mp3 tidak valid.")
     return str(target)
 
 
@@ -207,11 +294,14 @@ def _post_metadata(channel: dict, caption: str):
         return {"facebook": {"type": "post" if channel_type == "group" else "reel"}}
     if service in ("youtube", "yt"):
         return {"youtube": {"title": title, "categoryId": "27", "type": "short", "privacy": "public", "isAiGenerated": True}}
+    if service == "tiktok":
+        # Explicit AI disclosure for AI-generated content.
+        return {"tiktok": {"isAiGenerated": True}}
     if service in ("google", "googlebusiness", "google_business"):
         return {"google": {"type": "post"}}
     if service == "pinterest":
         raise RuntimeError("Buffer Pinterest memerlukan boardServiceId; helper staging belum mengonfigurasi board dan berhenti aman.")
-    # TikTok, LinkedIn, X/Twitter, Threads, Bluesky, Mastodon use the generic video asset shape.
+    # LinkedIn, X/Twitter, Threads, Bluesky, Mastodon use the generic video asset shape.
     return {}
 
 
