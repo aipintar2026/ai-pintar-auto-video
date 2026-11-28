@@ -1,0 +1,56 @@
+name: AI PINTAR 2.0 Live Production Test (No Publishing)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aipintar-live-test
+  cancel-in-progress: false
+
+jobs:
+  live-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ai-pintar-2-safety-fixes
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: |
+          python -m pip install pip-tools==7.5.2
+          pip-compile --generate-hashes --output-file=requirements.lock requirements.in
+          git diff --exit-code -- requirements.lock
+          pip install --require-hashes -r requirements.lock
+
+      - name: Run real Pixabay + Edge TTS + render + QC (publishing disabled)
+        env:
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          TTS_VOICE: id-ID-ArdiNeural
+          PUBLISH_ENABLED: "false"
+          PUBLISH_DRY_RUN: "true"
+        run: |
+          if [ -z "$PIXABAY_API_KEY" ]; then echo "Missing PIXABAY_API_KEY secret"; exit 1; fi
+          python run_production.py --output output_live_test
+
+      - name: Upload live test artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: AI-PINTAR-2-LIVE-TEST
+          path: output_live_test/
+          if-no-files-found: error
+          retention-days: 7
