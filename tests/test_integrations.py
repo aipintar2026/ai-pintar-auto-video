@@ -170,7 +170,7 @@ def test_pixabay_400_retries_with_minimal_query(tmp_path, monkeypatch):
             if self.status_code >= 400: raise RuntimeError(f"HTTP {self.status_code}")
         def json(self): return {"hits": self._hits}
     calls=[]
-    search_hit={"id":88,"videos":{"small":{"url":"https://video.invalid/88"}}}
+    search_hit={"id":88,"tags":"video pendek caption","videos":{"small":{"url":"https://video.invalid/88"}}}
     def fake_get(url, **kwargs):
         calls.append(kwargs.get("params"))
         if not kwargs.get("stream"):
