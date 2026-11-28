@@ -166,7 +166,9 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         (out/'script.txt').write_text(script,encoding='utf-8')
         media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
         used_ids=_load_media_ids(media_ids_path)
-        clips,ids=pixabay_download(topic.get('angle') or topic['title'],key,work,used_ids=used_ids,count=5)
+        # Search using both topic title and angle to reduce generic/irrelevant footage.
+        footage_query = " ".join(str(x).strip() for x in (topic.get('title'), topic.get('angle')) if x)
+        clips,ids=pixabay_download(footage_query,key,work,used_ids=used_ids,count=5)
         if len(clips) < 3:
             raise RuntimeError(f'QC: minimal 3 footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
         (out/'pixabay_ids.json').write_text(json.dumps(ids,indent=2),encoding='utf-8')
