@@ -164,6 +164,21 @@ def _save_media_ids(path, ids):
     tmp.replace(path)
 
 
+
+def _scene_queries(topic, script, count=5):
+    """Create distinct scene searches from distributed narration beats."""
+    title = str(topic.get('title') or '').strip()
+    sentences = [s.strip() for s in script.replace('!', '.').replace('?', '.').split('.') if s.strip()]
+    if not sentences:
+        raise ValueError('Naskah kosong; query footage per-scene tidak dapat dibuat.')
+    chosen = []
+    for i in range(min(count, len(sentences))):
+        index = round(i * (len(sentences) - 1) / max(1, count - 1))
+        query = (title + ' ' + sentences[index]).strip()[:80]
+        if query and query not in chosen:
+            chosen.append(query)
+    return chosen
+
 def run_pipeline(outdir='output_production', publish=False, channel_ids=None, upload_cloudinary=False, music=None):
     if publish and not check_publish_allowed():
         raise RuntimeError('Publish Guard: PUBLISH_ENABLED=true dan PUBLISH_DRY_RUN=false harus diset secara eksplisit.')
@@ -180,11 +195,15 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         (out/'script.txt').write_text(script,encoding='utf-8')
         media_ids_path=ROOT/'state'/'pixabay_used_ids.json'
         used_ids=_load_media_ids(media_ids_path)
-        # Search using both topic title and angle to reduce generic/irrelevant footage.
-        footage_query = " ".join(str(x).strip() for x in (topic.get('title'), topic.get('angle')) if x)
-        clips,ids=pixabay_download(footage_query,key,work,used_ids=used_ids,count=5)
+        # Search separately for each narration beat, not one broad topic query.
+        clips, ids = [], []
+        for scene_no, footage_query in enumerate(_scene_queries(topic, script, count=5), 1):
+            scene_dir = work / f"scene_{scene_no:02d}"
+            scene_clips, scene_ids = pixabay_download(footage_query, key, scene_dir, used_ids=[*used_ids, *ids], count=1)
+            clips.extend(scene_clips)
+            ids.extend(scene_ids)
         if len(clips) < 3:
-            raise RuntimeError(f'QC: minimal 3 footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
+            raise RuntimeError(f'QC: minimal 3 scene-specific footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
         footage_qc=_validate_footage(clips)
         (out/'pixabay_ids.json').write_text(json.dumps(ids,indent=2),encoding='utf-8')
         audio=out/'narration.mp3';create_tts(script,audio)
