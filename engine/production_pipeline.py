@@ -8,7 +8,7 @@ from .integrations import create_tts, cloudinary_upload, buffer_queue
 from .generated_visuals import generate_visual_clips
 from .qc import probe_video, prepublish_checks
 from .publish_guard import check_publish_allowed
-from .cover import create_cover_from_video
+from .cover import create_cover_from_video\nfrom .ai_video_prompts import build_prompt_pack
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -206,7 +206,7 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
     topic=selected['topic']; topic_id=topic['id']
     try:
         story=make_story(topic); script=story.narration()
-        (out/'script.txt').write_text(script,encoding='utf-8')
+        (out/'script.txt').write_text(script,encoding='utf-8')\n        prompt_pack=build_prompt_pack(topic,script,out)
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
         # Generate designed, topic-labeled visual scenes locally. No stock-media
@@ -220,7 +220,7 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
         manifest={'topic':topic,'visual_source':'local_generated_visual_cards','footage_qc':footage_qc,'duration':qc['duration'],'resolution':qc['resolution'],
-                  'video_format':'faceless','cover':cover_qc,
+                  'video_format':'faceless','cover':cover_qc,'ai_video_prompt_pack':str(out/'ai_video_prompt_pack.json'),'ai_video_prompt_scenes':len(prompt_pack.get('scenes',[])),
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
         (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
