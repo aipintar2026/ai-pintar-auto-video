@@ -63,14 +63,13 @@ def test_pipeline_failure_releases_topic_for_recovery(tmp_path,monkeypatch):
     memory,state_path=_memory(tmp_path)
     monkeypatch.setattr(pipeline,"TopicMemory",lambda:memory)
     monkeypatch.setattr(pipeline,"ROOT",tmp_path)
-    monkeypatch.setenv("PIXABAY_API_KEY","test-key")
     _patch_story(monkeypatch)
     monkeypatch.setattr(pipeline,"generate_visual_clips",lambda *a,**k: (_ for _ in ()).throw(RuntimeError("simulated visual generation failure")))
     with pytest.raises(RuntimeError,match="simulated visual generation failure"):
         pipeline.run_pipeline(outdir=tmp_path/"failed-output",publish=False)
     reopened=TopicMemory(tmp_path/"topics.json",state_path)
     assert "topic-a" not in reopened.state["used_ids"]
-    assert reopened.state["failures"][-1]["reason"]=="simulated download failure"
+    assert reopened.state["failures"][-1]["reason"]=="simulated visual generation failure"
     assert reopened.remaining()==1
 
 def test_pipeline_story_failure_releases_topic(tmp_path,monkeypatch):
