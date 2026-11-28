@@ -30,10 +30,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Install dependencies (avoid pip-tools compatibility failure)
+      - name: Install locked dependencies (no pip-tools, no lock regeneration)
         run: |
-          python -m pip install --upgrade pip==24.3.1 setuptools wheel
-          python -m pip install -r requirements.in
+          python -m pip install pip==24.3.1
+          python -m pip install --require-hashes -r requirements.lock
 
       - name: Run real Pixabay + Edge TTS + render + QC (publishing disabled)
         env:
@@ -42,7 +42,7 @@ jobs:
           PUBLISH_ENABLED: "false"
           PUBLISH_DRY_RUN: "true"
         run: |
-          if [ -z "$PIXABAY_API_KEY" ]; then echo "Missing PIXABAY_API_KEY secret"; exit 1; fi
+          if [ -z "$PIXABAY_API_KEY" ]; then echo "Missing repository secret PIXABAY_API_KEY"; exit 1; fi
           python run_production.py --output output_live_test
 
       - name: Upload live test artifacts
