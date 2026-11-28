@@ -146,23 +146,22 @@ def make_overlay(number, heading, subtitle, path):
     im.save(path)
 
 def pixabay_video(api_key, query, destination, used_ids):
-    """Search, rank semantic candidates by metadata, and reject weak matches."""
+    """Rank Pixabay footage against meaningful scene keywords and reject weak hits."""
     import re
-    def tokens(text):
-        return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w)>2}
-    query_tokens=tokens(query)
-    # Scene search is diversified: exact query first, then query-token variants.
+    stop={"the","and","for","with","from","this","that","untuk","dengan","agar","atau","yang","bisa","lebih","tetap","jangan","cara","gunakan","kita","dari","pada","sebelum","setelah","dalam","oleh","jadi","saat","buat","minta","hasil","ingin","ingin","ai","pintar","tips","edukasi"}
+    def token_list(text):
+        return [w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w)>2 and w not in stop]
+    key_words=token_list(query)
+    query_tokens=set(key_words)
     searches=[query]
-    words=list(query_tokens)
-    if len(words)>=2:
-        searches.append(" ".join(words[:3]))
-        searches.append(" ".join(words[-3:]))
+    if len(key_words)>=4:
+        searches.append(" ".join(key_words[:4]))
+        searches.append(" ".join(key_words[-4:]))
     searches=list(dict.fromkeys(searches))
     last_error=None
     for attempt in range(1,4):
         try:
-            ranked=[]
-            seen=set()
+            ranked=[]; seen=set()
             for search_query in searches:
                 params=urllib.parse.urlencode({"key":api_key,"q":search_query,"per_page":50,"video_type":"film","safesearch":"true"})
                 request=urllib.request.Request(API_URL+"?"+params,headers={"User-Agent":"AI-PINTAR-Video/2.0"})
@@ -173,19 +172,17 @@ def pixabay_video(api_key, query, destination, used_ids):
                     if not hid or hid in used_ids or hid in seen: continue
                     seen.add(hid)
                     formats=hit.get("videos",{})
-                    if not any(formats.get(s,{}).get("url") for s in ("medium","large","small")): continue
-                    meta=" ".join([str(hit.get("tags","")),str(hit.get("user",""))])
-                    mt=tokens(meta)
-                    overlap=len(query_tokens & mt)
-                    score=overlap/(max(1,len(query_tokens))) 
-                    # Exact query search results receive a small relevance bonus.
-                    if search_query==query: score+=0.15
+                    if not any(formats.get(size,{}).get("url") for size in ("medium","large","small")): continue
+                    meta_tokens=set(token_list(str(hit.get("tags",""))))
+                    overlap=query_tokens & meta_tokens
+                    # Use only substantive scene keywords; bonus for multi-keyword hits.
+                    score=len(overlap)/max(1,len(query_tokens))
+                    if search_query==query: score+=0.10
                     ranked.append((score,hit))
-            ranked.sort(key=lambda item:(item[0],random.random()),reverse=True)
-            # Avoid blindly accepting random low-relevance clips.
-            candidates=[hit for score,hit in ranked if score>=0.12]
+            ranked.sort(key=lambda item:item[0],reverse=True)
+            candidates=[hit for score,hit in ranked if score>=0.18]
             if not candidates:
-                raise RuntimeError("QC footage relevance: no candidates passed metadata relevance threshold for query '"+query+"'")
+                raise RuntimeError("Relevance QC menolak semua kandidat (skor minimum 0.18): "+query)
             for score,hit in candidates:
                 formats=hit.get("videos",{})
                 selected=formats.get("medium") or formats.get("large") or formats.get("small")
@@ -199,9 +196,9 @@ def pixabay_video(api_key, query, destination, used_ids):
                     Path(destination).write_bytes(video_data)
                     clip_id=str(hit.get("id",""))
                     if clip_id: used_ids.add(clip_id)
-                    print(f"FOOTAGE TERPILIH: ID {clip_id} | skor relevansi {score:.2f} | query '{query}'")
+                    print(f"FOOTAGE TERPILIH: ID {clip_id} | skor relevansi {score:.2f} | query='{query}'")
                     return clip_id
-            raise RuntimeError("Kandidat footage relevan gagal diunduh untuk query: "+query)
+            raise RuntimeError("Kandidat footage relevan gagal diunduh: "+query)
         except urllib.error.HTTPError as error:
             detail=error.read().decode("utf-8",errors="replace")
             print(f"PIXABAY HTTP ERROR: {error.code} | {detail[:500]}")
