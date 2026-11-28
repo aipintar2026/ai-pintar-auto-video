@@ -59,45 +59,5 @@ jobs:
             output_offline/manifest.json
             output_offline/script.txt
             output_offline/cover.jpg
-            output_offline/presenter_master.png
           if-no-files-found: error
-          retention-days: 7
-
-  talking-avatar-live-validation:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
-    steps:
-      - name: Checkout staging repair branch
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-
-      - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
-        with:
-          python-version: "3.11"
-
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Install locked runtime dependencies
-        run: pip install --require-hashes -r requirements.lock
-
-      - name: Install pinned optional Gradio client
-        run: pip install gradio_client==1.4.0
-
-      - name: Run real MuseTalk Space validation using synthetic media
-        env:
-          TALKING_AVATAR_SPACE: henrybit/musetalk-1-5
-          TTS_VOICE: id-ID-ArdiNeural
-        run: python -m engine.run_talking_avatar_live_test
-
-      - name: Upload live talking-avatar test artifact
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with:
-          name: AI-PINTAR-TALKING-AVATAR-LIVE
-          path: talking_avatar_live/
-          if-no-files-found: warn
           retention-days: 7
