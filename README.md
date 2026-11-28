@@ -9,8 +9,6 @@
 - Pixabay search/download with 24-hour result cache and used-ID tracking
 - Edge TTS (`id-ID-ArdiNeural` by default)
 - FFmpeg 1080×1920 render, burned subtitles (SRT + ASS), optional licensed music
-- Deterministic illustrated master-presenter generator; static chroma-key overlay
-- Opt-in talking-avatar adapter wiring via `TALKING_AVATAR_RUNNER` (engine not selected/live-tested)
 - Cover generation from the first footage frame with title overlay and structural QC
 - QC for video/audio streams, resolution, duration, caption, subtitle dwell/CPS, ASS/SRT parity and cover safe-zone
 - Signed Cloudinary upload helper (optional local staging test)
@@ -26,7 +24,7 @@ python -m pytest -q
 python run_offline_pipeline.py
 ```
 
-The offline pipeline produces a synthetic video, caption, SRT/ASS, manifest, generated presenter master and cover. It makes no external provider calls and does not publish.
+The offline pipeline produces a synthetic video, caption, SRT/ASS, manifest and cover. It makes no external provider calls and does not publish.
 
 ## Live media test (local)
 
@@ -36,20 +34,11 @@ Set `PIXABAY_API_KEY` and install requirements. Optional `TTS_VOICE` defaults to
 python run_production.py --output output_production
 ```
 
-This downloads five unique footage clips, generates narration, subtitles, presenter overlay and cover, then runs QC. It does **not** upload to Cloudinary or queue posts.
+This downloads five unique footage clips, generates narration, subtitles, footage and cover, then runs QC. It does **not** upload to Cloudinary or queue posts.
 
-The master presenter is generated automatically when no existing presenter path is supplied. It is a deterministic illustration on chroma-green; human visual acceptance is still required. A supplied image/video presenter may be passed with `--avatar`.
+## Production format
 
-## Talking-avatar (opt-in)
-
-The adapter is wired but no engine is selected or validated. A configured runner must accept `{image}`, `{audio}`, and `{output}` placeholders:
-
-```bash
-export TALKING_AVATAR_RUNNER='your-approved-runner --image {image} --audio {audio} --output {output}'
-python run_production.py --output output_production
-```
-
-Use only a runner whose provider, license, runtime, cost and output quality have been reviewed. A generated talking clip is chroma-keyed in the overlay path. Validate lip-sync, identity, cropping and quality on a short test before accepting the engine. No publishing is enabled by the adapter.
+AI PINTAR 2.0 uses a faceless format: footage, Indonesian AI narration, dynamic subtitles, cover and QC. Presenter overlays and talking-avatar/lip-sync generation are intentionally excluded from this production path.
 
 Optional music must be supplied by the operator with rights to use it:
 
