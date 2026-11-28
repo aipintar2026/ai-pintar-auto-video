@@ -23,7 +23,7 @@ NEGATIVE = (
 )
 
 def beats_from_script(script, max_words=26):
-    sentences=[s.strip() for s in re.split(r"(?<=[.!?])\\s+",script.strip()) if s.strip()]
+    sentences=[s.strip() for s in re.split(r"(?<=[.!?])\s+",script.strip()) if s.strip()]
     beats=[]
     for sentence in sentences:
         words=sentence.split()
@@ -52,5 +52,5 @@ def build_prompt_pack(topic, script, outdir, max_scene_words=26):
           "notes":"Prompt pack only. Video generation requires provider API key and cost authorization."}
     (outdir/"ai_video_prompt_pack.json").write_text(json.dumps(pack,ensure_ascii=False,indent=2),encoding="utf-8")
     (outdir/"ai_video_prompts.txt").write_text(
-        "\\n\\n".join(f"SCENE {x['scene']}\\nBeat: {x['beat']}\\nPrompt: {x['prompt']}\\nNegative: {x['negative_prompt']}" for x in prompts),encoding="utf-8")
+        "\n\n".join(f"SCENE {x['scene']}\nBeat: {x['beat']}\nPrompt: {x['prompt']}\nNegative: {x['negative_prompt']}" for x in prompts),encoding="utf-8")
     return pack
