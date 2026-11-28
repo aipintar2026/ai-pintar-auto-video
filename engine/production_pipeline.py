@@ -7,9 +7,7 @@ from .production import make_story
 from .integrations import pixabay_download, create_tts, cloudinary_upload, buffer_queue
 from .qc import probe_video, prepublish_checks
 from .publish_guard import check_publish_allowed
-from .talking_avatar import generate_talking_avatar
 from .cover import create_cover_from_video
-from .presenter import generate_master_presenter
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -194,24 +192,12 @@ def run_pipeline(outdir='output_production', publish=False, avatar=None, channel
         dur=_duration(audio)
         caption=caption_and_srt(topic,script,dur,out)
 
-        master=Path(avatar) if avatar else None
-        if master and not master.is_file():
-            raise FileNotFoundError(f'Master presenter image tidak ditemukan: {master}')
-        if master is None:
-            master=ROOT/'assets'/'aipintar_host_master.png'
-            if not master.exists():
-                master=generate_master_presenter(out/'presenter_master.png')
-        avatar_render=str(master)
-        avatar_mode='static_overlay'
-        if os.environ.get('TALKING_AVATAR_RUNNER','').strip():
-            talking=out/'presenter_talking.mp4'
-            avatar_render=generate_talking_avatar(master,audio,talking)
-            avatar_mode='talking_avatar'
-        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',avatar_render,vid,music=music)
+        # Faceless format: footage, narration and subtitles only; no presenter overlay.
+        vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',None,vid,music=music)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
         manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],
-                  'avatar_mode':avatar_mode,'avatar_source':str(master),'cover':cover_qc,
+                  'video_format':'faceless','cover':cover_qc,
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
         (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
