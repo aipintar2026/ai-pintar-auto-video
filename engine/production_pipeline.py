@@ -172,10 +172,13 @@ def _scene_queries(topic, script, count=5):
     if not sentences:
         raise ValueError('Naskah kosong; query footage per-scene tidak dapat dibuat.')
     chosen = []
-    for i in range(min(count, len(sentences))):
+    # Guarantee multiple distinct scene searches even for short/single-sentence test scripts.
+    scene_terms = ["opening concept", "practical example", "step by step", "result review", "closing summary"]
+    for i in range(count):
         index = round(i * (len(sentences) - 1) / max(1, count - 1))
-        query = (title + ' ' + sentences[index]).strip()[:80]
-        if query and query not in chosen:
+        beat = sentences[index]
+        query = (title + ' ' + beat + ' ' + scene_terms[i % len(scene_terms)]).strip()[:100]
+        if query not in chosen:
             chosen.append(query)
     return chosen
 
