@@ -168,21 +168,31 @@ def _save_media_ids(path, ids):
 
 
 def _scene_queries(topic, script, count=5):
-    """Create distinct scene searches from distributed narration beats."""
-    title = str(topic.get('title') or '').strip()
-    sentences = [s.strip() for s in script.replace('!', '.').replace('?', '.').split('.') if s.strip()]
-    if not sentences:
-        raise ValueError('Naskah kosong; query footage per-scene tidak dapat dibuat.')
-    chosen = []
-    # Guarantee multiple distinct scene searches even for short/single-sentence test scripts.
-    scene_terms = ["opening concept", "practical example", "step by step", "result review", "closing summary"]
-    for i in range(count):
-        index = round(i * (len(sentences) - 1) / max(1, count - 1))
-        beat = sentences[index]
-        query = (title + ' ' + beat + ' ' + scene_terms[i % len(scene_terms)]).strip()[:100]
-        if query not in chosen:
-            chosen.append(query)
-    return chosen
+    """Generate grounded, topic-specific searches rather than concatenated long Indonesian sentences."""
+    category = str(topic.get("category") or "").lower()
+    title = str(topic.get("title") or "").lower()
+    angle = str(topic.get("angle") or "").lower()
+    # Explicit visual vocabulary for common AI PINTAR topic categories.
+    mappings = [
+        (("prompt", "instruksi"), ["typing prompt laptop", "chatbot text prompt", "computer typing instructions", "AI chat interface", "person reviewing text on laptop"]),
+        (("produkt", "dokumen", "email", "tugas"), ["document editing laptop", "organizing tasks computer", "person working laptop office", "digital notes screen", "reviewing document"]),
+        (("konten", "video", "caption", "hook"), ["video editing timeline", "content creator laptop", "social media content planning", "writing caption laptop", "digital content workspace"]),
+        (("umkm", "produk", "pelanggan", "promosi"), ["small business laptop workspace", "online shop product photography", "customer service chat screen", "product listing laptop", "small business packaging"]),
+        (("keamanan", "fakta", "rahasia"), ["cybersecurity laptop", "checking information computer", "privacy lock computer", "research sources laptop", "secure digital data"]),
+        (("bisnis digital", "ebook", "template"), ["digital product laptop", "ebook editing computer", "online business workspace", "digital templates screen", "planning digital product"]),
+        (("belajar", "bahasa"), ["online learning laptop", "language learning computer", "student studying desk", "digital education screen", "practice writing computer"]),
+        (("eksperimen", "rencana belajar"), ["testing software laptop", "planning notebook computer", "comparing results screen", "working laptop desk", "digital experiment"]),
+        (("ai pintar", "otomatisasi", "membangun"), ["automation workflow computer", "video production workstation", "software workflow screen", "developer laptop workspace", "digital media production"]),
+        (("chatgpt", "jawaban", "ai"), ["AI chatbot interface", "person using AI laptop", "chatbot response screen", "reviewing AI output", "computer artificial intelligence"]),
+    ]
+    selected=None
+    for keywords, queries in mappings:
+        if any(k in category or k in title or k in angle for k in keywords):
+            selected=queries
+            break
+    if selected is None:
+        selected=["AI chatbot interface", "person using computer", "digital workspace", "technology screen", "typing on laptop"]
+    return selected[:count]
 
 def run_pipeline(outdir='output_production', publish=False, channel_ids=None, upload_cloudinary=False, music=None):
     if publish and not check_publish_allowed():
