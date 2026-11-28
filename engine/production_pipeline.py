@@ -125,7 +125,7 @@ def caption_and_srt(topic, script, duration, output):
         cues.append(f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(elapsed)}\n{srt_text}")
         ass_text=r"\N".join(wrapped).replace("{",r"\{").replace("}",r"\}")
         ass_events.append(f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(elapsed)},Default,,0,0,0,,{ass_text}")
-    (Path(output)/'subtitles.srt').write_text("
+    (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding="utf-8")
 
 ".join(cues)+"
 ",encoding='utf-8')
@@ -142,7 +142,7 @@ Style: Default,DejaVu Sans,34,&H00FFFFFF,&H0000FFFF,&H00101010,&H90000000,1,0,0,
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
-    (Path(output)/'subtitles.ass').write_text(ass_header+"
+    (Path(output)/'subtitles.ass').write_text(ass_header+"\n".join(ass_events)+"\n",encoding="utf-8")
 ".join(ass_events)+"
 ",encoding='utf-8')
     return caption
