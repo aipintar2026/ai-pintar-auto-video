@@ -21,6 +21,20 @@ def _duration(path):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)], text=True).strip())
 
 
+def _validate_footage(clips):
+    """Reject unusably short/low-resolution source clips before assembly."""
+    reports=[]
+    for clip in clips:
+        raw=subprocess.check_output(["ffprobe","-v","error","-select_streams","v:0","-show_entries","stream=width,height","-show_entries","format=duration","-of","json",str(clip)],text=True)
+        data=json.loads(raw); streams=data.get("streams") or []
+        if not streams: raise RuntimeError(f"Footage QC: video stream missing in {Path(clip).name}")
+        w=int(streams[0].get("width") or 0); h=int(streams[0].get("height") or 0); d=float((data.get("format") or {}).get("duration") or 0)
+        if min(w,h)<480 or d<3:
+            raise RuntimeError(f"Footage QC: {Path(clip).name} unusable (resolution {w}x{h}, duration {d:.1f}s).")
+        reports.append({"file":Path(clip).name,"resolution":f"{w}x{h}","duration":round(d,2)})
+    return reports
+
+
 def _escape_filter_path(path):
     return str(path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace(",", "\\,")
 
@@ -171,6 +185,7 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         clips,ids=pixabay_download(footage_query,key,work,used_ids=used_ids,count=5)
         if len(clips) < 3:
             raise RuntimeError(f'QC: minimal 3 footage berbeda dibutuhkan, hanya {len(clips)} tersedia.')
+        footage_qc=_validate_footage(clips)
         (out/'pixabay_ids.json').write_text(json.dumps(ids,indent=2),encoding='utf-8')
         audio=out/'narration.mp3';create_tts(script,audio)
         dur=_duration(audio)
@@ -180,7 +195,7 @@ def run_pipeline(outdir='output_production', publish=False, channel_ids=None, up
         vid=out/'final_video.mp4';ffmpeg_render(clips,audio,out/'subtitles.srt',vid,music=music)
         cover=out/'cover.jpg';cover_qc=create_cover_from_video(clips[0],cover,topic['title'])
         qc=prepublish_checks(vid,out/'caption.txt',topic_id,out/'subtitles.srt',cover=cover,cover_title=topic['title'],cover_layout=cover_qc)
-        manifest={'topic':topic,'pixabay_ids':ids,'duration':qc['duration'],'resolution':qc['resolution'],
+        manifest={'topic':topic,'pixabay_ids':ids,'footage_qc':footage_qc,'duration':qc['duration'],'resolution':qc['resolution'],
                   'video_format':'faceless','cover':cover_qc,
                   'music_overlay':bool(music and Path(music).exists()),'qc':qc,
                   'publish_requested':publish,'publish_result':'not attempted','cloudinary_result':'not attempted'}
