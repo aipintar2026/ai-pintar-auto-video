@@ -7,7 +7,7 @@ W,H=1080,1920
 PALETTES=[((13,24,48),(28,76,130),(76,194,255)),((18,22,44),(67,44,120),(187,124,255)),((12,38,43),(29,112,90),(125,255,190)),((40,25,27),(128,57,47),(255,179,106)),((20,34,54),(43,86,115),(135,218,255))]
 
 def _clean(s):
-    return re.sub(r"\\s+", " ", str(s or "")).strip()
+    return re.sub(r"\s+", " ", str(s or "")).strip()
 
 def _font(size,bold=False):
     paths=["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf","/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"]
@@ -69,7 +69,7 @@ def _scene_kind(topic,beat):
 def generate_visual_clips(topic,script,outdir,duration,count=5):
     outdir=Path(outdir);outdir.mkdir(parents=True,exist_ok=True)
     title=_clean(topic.get("title","AI PINTAR"));category=_clean(topic.get("category","AI"))
-    sentences=[_clean(x) for x in re.split(r"(?<=[.!?])\\s+",str(script)) if _clean(x)]
+    sentences=[_clean(x) for x in re.split(r"(?<=[.!?])\s+",str(script)) if _clean(x)]
     if not sentences:sentences=[title]
     scenes=[]
     for i in range(count):
