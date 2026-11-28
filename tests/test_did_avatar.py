@@ -10,6 +10,9 @@ class FakeResponse:
     def __init__(self, data=None, payload=b""):
         self.data = data
         self.payload = payload
+        self.ok = True
+        self.status = 200
+        self.text = ""
 
     def raise_for_status(self):
         pass
