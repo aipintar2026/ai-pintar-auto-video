@@ -34,7 +34,7 @@ def test_pipeline_mocked_end_to_end_offline(tmp_path,monkeypatch):
     monkeypatch.setattr(pipeline,"pixabay_download",fake_download)
     monkeypatch.setattr(pipeline,"create_tts",lambda script,path:(Path(path).write_bytes(b"x"*20_000) or str(path)))
     monkeypatch.setattr(pipeline,"_duration",lambda path:35.0)
-    def fake_render(clips,narration,subtitles,avatar,out,music=None):
+    def fake_render(clips,narration,subtitles,out,music=None):
         Path(out).write_bytes(b"x"*200_000)
         return out
     monkeypatch.setattr(pipeline,"ffmpeg_render",fake_render)
@@ -51,8 +51,8 @@ def test_pipeline_mocked_end_to_end_offline(tmp_path,monkeypatch):
     assert manifest["publish_result"]=="not attempted"
     assert manifest["qc"]["resolution"]=="1080x1920"
     assert manifest["video_format"]=="faceless"
-    assert "avatar_mode" not in manifest
-    assert "avatar_source" not in manifest
+    assert "presenter" not in manifest
+    assert "avatar" not in manifest
     assert manifest["cover"]["cover_qc_status"]=="PASS"
     assert (out/"final_video.mp4").stat().st_size>=100_000
     assert memory.state["used_ids"]==["topic-a"]
