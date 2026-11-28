@@ -126,9 +126,6 @@ def caption_and_srt(topic, script, duration, output):
         ass_text=r"\N".join(wrapped).replace("{",r"\{").replace("}",r"\}")
         ass_events.append(f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(elapsed)},Default,,0,0,0,,{ass_text}")
     (Path(output)/'subtitles.srt').write_text("\n\n".join(cues)+"\n",encoding="utf-8")
-
-".join(cues)+"
-",encoding='utf-8')
     ass_header="""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
@@ -143,8 +140,6 @@ Style: Default,DejaVu Sans,34,&H00FFFFFF,&H0000FFFF,&H00101010,&H90000000,1,0,0,
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
     (Path(output)/'subtitles.ass').write_text(ass_header+"\n".join(ass_events)+"\n",encoding="utf-8")
-".join(ass_events)+"
-",encoding='utf-8')
     return caption
 
 def _srt_timestamp(seconds):
